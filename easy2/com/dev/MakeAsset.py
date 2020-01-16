@@ -474,14 +474,14 @@ class AssetPackage:
 class EnDict:
     def __init__(self):
         # self._generate()
-        self._nounlist = FS.read_text('/Users/joli/proj/master/python/resource/endict/starnoun1.txt').split('\n')
-        self._verblist = FS.read_text('/Users/joli/proj/master/python/resource/endict/starverb1.txt').split('\n')
+        self._resdir = os.path.abspath(os.path.join(__file__, '../../../../resource'))
+        self._nounlist = FS.read_text(os.path.join(self._resdir, 'endict/starnoun1.txt')).split('\n')
+        self._verblist = FS.read_text(os.path.join(self._resdir, 'endict/starnoun1.txt')).split('\n')
         self._nounimax = len(self._nounlist) - 1
         self._verbimax = len(self._verblist) - 1
         log.d(f'noun:{self._nounimax+1}, verb:{self._verbimax+1}')
 
-    @staticmethod
-    def _generate():
+    def _generate(self):
         re_lower = re.compile('^[a-z]+?$')
 
         def load(src, wlen):
@@ -501,11 +501,11 @@ class EnDict:
                     ws.pop(i)
             return tuple(ws)
 
-        ns = load('/Users/joli/proj/master/python/resource/endict/starnoun.txt', 7)
-        vs = load('/Users/joli/proj/master/python/resource/endict/starverb.txt', 6)
-        with open('/Users/joli/proj/master/python/resource/endict/starnoun1.txt', 'w') as f:
+        ns = load(os.path.join(self._resdir, 'endict/starnoun.txt'), 7)
+        vs = load(os.path.join(self._resdir, 'endict/starverb.txt'), 6)
+        with open(os.path.join(self._resdir, 'endict/starnoun1.txt'), 'w') as f:
             f.write('\n'.join(ns))
-        with open('/Users/joli/proj/master/python/resource/endict/starverb1.txt', 'w') as f:
+        with open(os.path.join(self._resdir, 'endict/starverb1.txt'), 'w') as f:
             f.write('\n'.join(vs))
 
     def noun(self):  # 随机名词
@@ -1072,19 +1072,19 @@ def main():
     # target_dir = os.path.join(project_dir, 'zhanguo_xc/app_tendo/package/sgdyx')
     # source_dir = os.path.join(project_dir, 'resource/dudai_vn')
 
-    # 打包资源
-    magic = b'baimei'
-    build_pkg = os.path.join(working_dir, 'baimei.data')
-    build_dir = os.path.join(working_dir, 'resource')
-    blur_kb = random.randint(1024, 2048) * 1024
-    fill_mb = 1
-    make_resource(build_dir, source_dir, target_dir)
-    ab = AssetBuilder(magic=magic, blend=True)
-    ab.pack(build_pkg, build_dir, blurkb=blur_kb, fillmb=fill_mb)
-    with AssetPackage(build_pkg, magic=magic) as ap:
-        ap.unpack(os.path.join(working_dir, 'unpack'), build_dir, output=True)
-    log.i('AssetBuilder blur=%dkb, fill=%fmb' % (blur_kb/1024, fill_mb))
-    FS.explorer(working_dir)
+    # # 打包资源
+    # magic = b'baimei'
+    # build_pkg = os.path.join(working_dir, 'baimei.data')
+    # build_dir = os.path.join(working_dir, 'resource')
+    # blur_kb = random.randint(1024, 2048) * 1024
+    # fill_mb = 1
+    # make_resource(build_dir, source_dir, target_dir)
+    # ab = AssetBuilder(magic=magic, blend=True)
+    # ab.pack(build_pkg, build_dir, blurkb=blur_kb, fillmb=fill_mb)
+    # with AssetPackage(build_pkg, magic=magic) as ap:
+    #     ap.unpack(os.path.join(working_dir, 'unpack'), build_dir, output=True)
+    # log.i('AssetBuilder blur=%dkb, fill=%fmb' % (blur_kb/1024, fill_mb))
+    # FS.explorer(working_dir)
 
     # # 垃圾文件生成器
     # lb = LitterBuilder()
