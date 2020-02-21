@@ -3,6 +3,7 @@
 # @Author  : Joli
 # @Email   : 99755349@qq.com
 import base64
+import json
 import os
 import xml.etree.ElementTree as ET
 from androguard.core.bytecodes import axml
@@ -540,3 +541,44 @@ class RobBZDX:
 """
         MakeShader.encode_shader(shader)
 
+class RobKHSG(DeApkBase):  # 开黑三国
+    def __init__(self):
+        DeApkBase.__init__(self, 'khsg')
+        # self.analyse_json(os.path.join(self.root, 'khsg_dist/assets/res/import'))
+
+    def analyse_json(self, json_root):
+        print(json_root)
+        types_list = set()
+        for p in FS.walk_files(json_root, ewhites=['.json']):
+            obj = json.loads(FS.read_text(p))
+            if not obj:
+                continue
+            if isinstance(obj, dict):
+                t = obj['__type__']
+                if t.startswith('cc.'):
+                    if t == 'cc.JsonAsset':
+                        if not obj['json']['frames']:
+                            print(p)
+                    types_list.add(t)
+                continue
+            # print(type(obj))
+        print(types_list)
+
+    def decrypt_res(self):
+        raw_root = os.path.join(self.root, 'khsg_wf_dist/assets/res/raw-assets')
+        for f in FS.walk_files(raw_root, ewhites=['.png']):
+            with open(f, 'rb') as fp:
+                buffer = self.decrypt_png(fp.read())
+            with open(f, 'wb') as fp:
+                fp.write(buffer)
+        print('finish')
+
+    @staticmethod
+    def decrypt_png(buffer):
+        if buffer[:5] != b'tkmcg':
+            return buffer
+        mask = buffer[5]
+        buffer = bytearray(buffer[6:])
+        for i in range(len(buffer)):
+            buffer[i] = buffer[i] ^ mask
+        return buffer

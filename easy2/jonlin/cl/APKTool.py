@@ -10,7 +10,7 @@ from jonlin.utils import Log
 
 log = Log.Logger(__file__)
 
-APK2DIR = '/Users/joli/source/android/apktool'
+APK2DIR = '/Users/joli/Priv/android/apktool'
 # APK2JAR = os.path.join(APK2DIR, 'apktool_2.3.0.jar')
 APK2JAR = os.path.join(APK2DIR, 'apktool_2.4.0.jar')
 

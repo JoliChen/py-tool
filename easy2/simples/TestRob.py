@@ -585,20 +585,20 @@ def test_json2excel():
 
 def test_hack_apk():
     from simples.rob import RobAPK
-    deapk = RobAPK.RobBZDX()
+    deapk = RobAPK.RobKHSG()
     # deapk.decompile()
     # deapk.reinstall()
     # deapk.extract_files()
-    # deapk.decrypt_res()
+    deapk.decrypt_res()
     # deapk.pull_files()
 
 def main():
     pass
-    test_json2excel()
+    # test_json2excel()
     # test_load_cdn_files()
     # test_hack_xor()
     # test_hack_xxtea()
     # test_hack_luac()
     # test_hack_zlib()
     # test_hack_respack()
-    # test_hack_apk()
+    test_hack_apk()
