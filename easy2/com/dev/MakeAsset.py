@@ -1065,7 +1065,7 @@ def main():
     working_dir = '/Users/joli/Desktop/test/asset'
     # 乱斗
     project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou'
-    target_dir = os.path.join(project_dir, 'luandou_xc/app_shenshi/package/FuYaows')
+    target_dir = os.path.join(project_dir, 'luandou_xc/app_shenshi/package/SDDZ')
     source_dir = os.path.join(project_dir, 'resource/xiuxian')
     # # 战国
     # project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/zhanguo'
@@ -1073,11 +1073,11 @@ def main():
     # source_dir = os.path.join(project_dir, 'resource/dudai_vn')
 
     # 打包资源
-    magic = b'wushen'
-    build_pkg = os.path.join(working_dir, 'wushen.bytes')
+    magic = b'#ssdz#'
+    build_pkg = os.path.join(working_dir, 'tjzsddz.bytes')
     build_dir = os.path.join(working_dir, 'resource')
     blur_kb = random.randint(1024, 2048) * 1024
-    fill_mb = 3
+    fill_mb = 5
     make_resource(build_dir, source_dir, target_dir)
     ab = AssetBuilder(magic=magic, blend=True)
     ab.pack(build_pkg, build_dir, blurkb=blur_kb, fillmb=fill_mb)
@@ -1093,7 +1093,7 @@ def main():
     # # 垃圾代码生成器
     # codes_dir = os.path.join(working_dir, 'codes')
     # fb = FakerBuilder(liemb=6)
-    # fb.build(codes_dir, num_ac=0, num_ui=12, num_vc=12, num_md=12)
+    # fb.build(codes_dir, num_ac=0, num_ui=8, num_vc=8, num_md=9)
     # log.i('FakerBuilder liebytes:%f/%f' % (fb.use_liebytes/1024/1024, fb.max_liebytes/1024/1024))
 
     # # 测试

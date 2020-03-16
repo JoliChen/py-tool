@@ -197,9 +197,6 @@ def test_hack_luac():
     Shell.run('java -Djava.awt.headless=true -jar %s %s>%s' % (unluac, src, dst))
 
 def test_hack_respack():
-
-
-
     def split_files(pkg, buffer):
         with open(pkg + '_filelist.txt', 'r') as fp:
             filelist = []
@@ -585,7 +582,7 @@ def test_json2excel():
 
 def test_hack_apk():
     from simples.rob import RobAPK
-    deapk = RobAPK.RobKHSG()
+    deapk = RobAPK.RobZQQST()
     # deapk.decompile()
     # deapk.reinstall()
     # deapk.extract_files()

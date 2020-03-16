@@ -196,6 +196,48 @@ def laya_sk(skpath, imagepath=None, outputdir=None):
             FS.make_parent(item_src)
             item_img.save(item_src)
 
+# 拆分图片 - cocos2dx-bytes
+def cocos_bytes(imagepath, datapath=None, outputdir=None):
+    try:
+        image_object = Image.open(imagepath)
+    except:
+        print('error open:' + imagepath)
+        return
+    print('split cocos ' + imagepath)
+    imagedir = os.path.dirname(imagepath)
+    imagename = FS.filename(imagepath)
+    if datapath is None or not os.path.exists(datapath):
+        datapath = imagedir + '/' + imagename + '.bytes'
+    imageinfo = {}
+    try:
+        with open(datapath, 'r') as f:
+            first = True
+            for line in f.readlines():
+                if first:
+                    first = False
+                else:
+                    p = line.find('{')
+                    f = line[p:].replace('{', '').replace('}', '').split(',')
+                    imageinfo[line[0:p-1]] = [int(f[0]), int(f[1]), int(f[2]), int(f[3])]
+    except:
+        print('error info:' + imagepath)
+    if not imageinfo:
+        return
+    if outputdir is None or not os.path.exists(outputdir):
+        outputdir = os.path.join(imagedir, 'u_output')
+    for name in imageinfo.keys():
+        frame = imageinfo[name]
+        x = frame[0]
+        y = frame[1]
+        w = frame[2]
+        h = frame[3]
+        rect = (x, y, x + w, y + h)
+        crop_obj = image_object.crop(rect)
+        corp_path = os.path.join(outputdir, name)
+        FS.make_parent(corp_path)
+        crop_obj.save(corp_path)
+
+
 # 拆分图片-atlas
 def laya_atlas():
     pass

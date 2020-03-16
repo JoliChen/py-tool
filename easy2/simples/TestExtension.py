@@ -67,11 +67,14 @@ def test_batch_refactor_xcplist():
 def test_split_images():
     from com.arts import SplitImages
     # SplitImages.tp('/Users/joli/Desktop/snsgz/effect/effect_beifa_2/effect_beifa_2.plist')
-    pro = '/Users/joli/Desktop/test/rob/1'
-    src = os.path.join(pro, 'snxyj')
-    for f in FS.walk_files(src, ewhites=['.plist'], cut=len(src) + 1):
-        d = os.path.join(pro, 'snxyj_ef', os.path.dirname(f), FS.filename(f))
-        SplitImages.tp(os.path.join(src, f), outputdir=d)
+    pro_root = '/Users/joli/Downloads/effect'
+    for f in FS.walk_files(pro_root, ewhites=['.png']):
+        SplitImages.cocos_bytes(f)
+
+    # src = os.path.join(pro, 'snxyj')
+    # for f in FS.walk_files(src, ewhites=['.plist'], cut=len(src) + 1):
+    #     d = os.path.join(pro, 'snxyj_ef', os.path.dirname(f), FS.filename(f))
+    #     SplitImages.tp(os.path.join(src, f), outputdir=d)
 
     # for filename in FS.walk_files('/Users/joli/Desktop/apps/玄元剑仙/xiuxianRes/UI_effect', ext_whites=['.sk']):
     #     print(filename)

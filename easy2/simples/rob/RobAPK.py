@@ -12,6 +12,7 @@ from jonlin.cl import APKTool, ADB
 from jonlin.utils import FS, Text, Crypto, Bit
 from simples.rob import RobCom
 from simples.rob.unity import UnityExtract
+from simples.rob.unity import PKMTools
 
 
 class DeApkBase:
@@ -572,6 +573,42 @@ class RobKHSG(DeApkBase):  # 开黑三国
             with open(f, 'wb') as fp:
                 fp.write(buffer)
         print('finish')
+
+    @staticmethod
+    def decrypt_png(buffer):
+        if buffer[:5] != b'tkmcg':
+            return buffer
+        mask = buffer[5]
+        buffer = bytearray(buffer[6:])
+        for i in range(len(buffer)):
+            buffer[i] = buffer[i] ^ mask
+        return buffer
+
+class RobZQQST(DeApkBase):  # 最强骑士团
+    def __init__(self):
+        DeApkBase.__init__(self, 'zqqst')
+
+    def decrypt_res(self):
+        raw_root = '/Users/joli/Downloads/zqqst/assets/res/fca'
+        # for f in FS.walk_files(raw_root, ewhites=['.pvr', '.pvr@alpha']):
+        #     with open(f, 'rb') as fp:
+        #         pkm = fp.read()
+        #     png = PKMTools.pkm2png(gen=10, data=pkm)
+        #     with open('/Users/joli/Downloads/zqqst/assets/res/fca/1.png', 'wb') as fp:
+        #         fp.write(png)
+        #     break
+        f = '/Users/joli/Downloads/zqqst/assets/res/fca/hero/Bard0.pvr'
+
+
+
+
+        # with open(f, 'rb') as fp:
+        #     pkm = fp.read()
+        #     # pkm = pkm[4:]
+        # png = PKMTools.pkm2png(gen=5, data=pkm)
+        # with open('/Users/joli/Downloads/zqqst/assets/res/fca/1.png', 'wb') as fp:
+        #     fp.write(png)
+        # print('finish')
 
     @staticmethod
     def decrypt_png(buffer):
