@@ -65,11 +65,11 @@ def test_batch_refactor_xcplist():
 
 # 根据plist分解图片
 def test_split_images():
-    from com.arts import SplitImages
+    from com.arts import ImageTailor
     # SplitImages.tp('/Users/joli/Desktop/snsgz/effect/effect_beifa_2/effect_beifa_2.plist')
     pro_root = '/Users/joli/Downloads/effect'
     for f in FS.walk_files(pro_root, ewhites=['.png']):
-        SplitImages.cocos_bytes(f)
+        ImageTailor.cocos_bytes(f)
 
     # src = os.path.join(pro, 'snxyj')
     # for f in FS.walk_files(src, ewhites=['.plist'], cut=len(src) + 1):

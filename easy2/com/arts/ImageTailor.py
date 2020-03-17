@@ -6,12 +6,10 @@
 import biplist
 from PIL import Image
 import os
-
-# 拆分图片-TexturePacker
 from jonlin.utils import FS
 
+# 拆分图片-TexturePacker
 def tp(plistpath, imagepath=None, outputdir=None, fixwhite=True):
-    print(plistpath)
     if imagepath is None:
         imagepath = plistpath.replace('.plist', '.png')
     if not os.path.isfile(imagepath):
@@ -23,6 +21,7 @@ def tp(plistpath, imagepath=None, outputdir=None, fixwhite=True):
     except:
         return
 
+    print(plistpath)
     if outputdir is None:
         outputdir = plistpath.replace('.plist', '_images')
     if not os.path.isdir(outputdir):  # 如果不存在该目录
@@ -30,33 +29,63 @@ def tp(plistpath, imagepath=None, outputdir=None, fixwhite=True):
 
     src_img = Image.open(imagepath)  # 打开图像
     for k, v in plist['frames'].items():
-        if 'frame' not in v:
-            return
         if not k.endswith('.png'):
             continue
-        frame = str(v['frame']).replace('{', '').replace('}', '').split(',')
-        w = int(frame[3] if v['rotated'] else frame[2])
-        h = int(frame[2] if v['rotated'] else frame[3])
-        rect = (int(frame[0]), int(frame[1]), int(frame[0]) + w, int(frame[1]) + h)
-        cell_img = src_img.crop(rect)
-        if not cell_img:
-            continue
-        if v['rotated']:
-            # box_img = box_img.rotate(90)
-            cell_img = cell_img.transpose(Image.ROTATE_90)
-        outfile = os.path.join(outputdir, k)
-        if fixwhite:
-            frame = str(v['sourceSize']).replace('{', '').replace('}', '').split(',')
-            w, h = int(frame[0]), int(frame[1])
-            frame = str(v['sourceColorRect']).replace('{', '').replace('}', '').split(',')
-            x, y = int(frame[0]), int(frame[1])
-            rect = (x, y, x + cell_img.width, y + cell_img.height)
-            item_img = Image.new('RGBA', size=(w, h))
-            item_img.paste(cell_img, rect)
-            item_img.save(outfile)
-        else:
-            cell_img.save(outfile)
+        if 'frame' in v:
+            _tp_crop_3(src_img, outputdir, k, v, fixwhite)
+        elif 'textureRect' in v:
+            _tp_crop_2(src_img, outputdir, k, v, fixwhite)
     # print('split texturepacker images done', plistpath)
+
+def _tp_crop_3(src_img, outputdir, k, v, fixwhite):
+    isrotated = v.get("rotated")
+    frame = str(v['frame']).replace('{', '').replace('}', '').split(',')
+    w = int(frame[3] if isrotated else frame[2])
+    h = int(frame[2] if isrotated else frame[3])
+    rect = (int(frame[0]), int(frame[1]), int(frame[0]) + w, int(frame[1]) + h)
+    cell_img = src_img.crop(rect)
+    if not cell_img:
+        return
+    if isrotated:
+        # box_img = box_img.rotate(90)
+        cell_img = cell_img.transpose(Image.ROTATE_90)
+    outfile = os.path.join(outputdir, k)
+    if not fixwhite:
+        cell_img.save(outfile)
+        return
+    frame = str(v['sourceSize']).replace('{', '').replace('}', '').split(',')
+    w, h = int(frame[0]), int(frame[1])
+    frame = str(v['sourceColorRect']).replace('{', '').replace('}', '').split(',')
+    x, y = int(frame[0]), int(frame[1])
+    rect = (x, y, x + cell_img.width, y + cell_img.height)
+    item_img = Image.new('RGBA', size=(w, h))
+    item_img.paste(cell_img, rect)
+    item_img.save(outfile)
+
+def _tp_crop_2(src_img, outputdir, k, v, fixwhite):
+    frame = str(v['textureRect']).replace('{', '').replace('}', '').split(',')
+    isrotated = v.get("textureRotated")
+    w = int(frame[3] if isrotated else frame[2])
+    h = int(frame[2] if isrotated else frame[3])
+    rect = (int(frame[0]), int(frame[1]), int(frame[0]) + w, int(frame[1]) + h)
+    cell_img = src_img.crop(rect)
+    if not cell_img:
+        return
+    if isrotated:
+        # box_img = box_img.rotate(90)
+        cell_img = cell_img.transpose(Image.ROTATE_90)
+    outfile = os.path.join(outputdir, os.path.basename(k))
+    if not fixwhite:
+        cell_img.save(outfile)
+        return
+    frame = str(v['spriteSize']).replace('{', '').replace('}', '').split(',')
+    w, h = int(frame[0]), int(frame[1])
+    frame = str(v['spriteSourceSize']).replace('{', '').replace('}', '').split(',')
+    x, y = int(frame[0]), int(frame[1])
+    rect = (x, y, x + cell_img.width, y + cell_img.height)
+    item_img = Image.new('RGBA', size=(w, h))
+    item_img.paste(cell_img, rect)
+    item_img.save(outfile)
 
 # 拆分图片-spine
 def spine(atlaspath, imagepath=None, outputdir=None, fixwhite=True):

@@ -29,18 +29,16 @@ def cleanup_dir(dp):
 
 # 获取文件名 (包含扩展名)
 def basename(p, sep=None):
-    # os.path.basename(fp)
     return p[p.rfind(sep or os.sep) + 1:]
 
 # 获取文件名 (不包含扩展名)
-def filename(fp, sep=None):
-    s = basename(fp, sep)
-    return s[0: s.rfind('.')]
+def filename(p, sep=None):
+    return p[p.rfind(sep or os.sep)+1: p.rfind('.')]
 
 # 获取文件扩展名 (.png，.jpg, ...)
-def extensions(fp):
+def extensions(p):
     # return os.path.splitext(fp)[1]
-    return fp[fp.rfind('.'):]
+    return p[p.rfind('.'):]
 
 # 获取直接父级目录名称
 def parentname(p, sep=None):

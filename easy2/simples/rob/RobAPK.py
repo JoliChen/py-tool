@@ -8,11 +8,10 @@ import os
 import xml.etree.ElementTree as ET
 from androguard.core.bytecodes import axml
 
+from com.arts import ImageTailor, ImageTools, PKMTools, UnityExtract
 from jonlin.cl import APKTool, ADB
 from jonlin.utils import FS, Text, Crypto, Bit
 from simples.rob import RobCom
-from simples.rob.unity import UnityExtract
-from simples.rob.unity import PKMTools
 
 
 class DeApkBase:
@@ -524,7 +523,6 @@ class RobTMCS(DeApkBase):  # 天命传说
 
 class RobBZDX:
     def __init__(self):
-        from simples.rob.unity import UnityExtract
         cur = '/Users/joli/Downloads/tianmingchuanshuo1.4.0'
         dst = os.path.join(cur, 'assets-d')
         src = os.path.join(cur, 'assets')
@@ -590,32 +588,44 @@ class RobZQQST(DeApkBase):  # 最强骑士团
 
     def decrypt_res(self):
         raw_root = '/Users/joli/Downloads/zqqst/assets/res/fca'
-        # for f in FS.walk_files(raw_root, ewhites=['.pvr', '.pvr@alpha']):
-        #     with open(f, 'rb') as fp:
-        #         pkm = fp.read()
-        #     png = PKMTools.pkm2png(gen=10, data=pkm)
-        #     with open('/Users/joli/Downloads/zqqst/assets/res/fca/1.png', 'wb') as fp:
-        #         fp.write(png)
-        #     break
-        f = '/Users/joli/Downloads/zqqst/assets/res/fca/hero/Bard0.pvr'
-
-
-
-
-        # with open(f, 'rb') as fp:
-        #     pkm = fp.read()
-        #     # pkm = pkm[4:]
-        # png = PKMTools.pkm2png(gen=5, data=pkm)
-        # with open('/Users/joli/Downloads/zqqst/assets/res/fca/1.png', 'wb') as fp:
-        #     fp.write(png)
-        # print('finish')
+        # self.convert_pngs(raw_root)
+        # self.convert_final(raw_root)
+        self.split_by_plist(raw_root)
+        print('finish')
 
     @staticmethod
-    def decrypt_png(buffer):
-        if buffer[:5] != b'tkmcg':
-            return buffer
-        mask = buffer[5]
-        buffer = bytearray(buffer[6:])
-        for i in range(len(buffer)):
-            buffer[i] = buffer[i] ^ mask
-        return buffer
+    def convert_pngs(raw_root):
+        for f in FS.walk_files(raw_root, ewhites=['.pvr']):
+            PKMTools.pkm2png(f, os.path.dirname(f), transpose=False)
+        for f in FS.walk_files(raw_root, ewhites=['.pvr@alpha']):
+            PKMTools.pkm2png(f, os.path.dirname(f), transpose=False, subfix='_alpha')
+
+    @staticmethod
+    def convert_final(raw_root):
+        # r = '/Users/joli/Downloads/zqqst/assets/res/fca/effect/eff_buff_newSpider_ult0.png'
+        # a = '/Users/joli/Downloads/zqqst/assets/res/fca/effect/eff_buff_newSpider_ult0_alpha.png'
+        # f = '/Users/joli/Downloads/zqqst/assets/res/fca/effect/eff_buff_newSpider_ult0_final.png'
+        # image = ImageTools.merge_rgb_alpha(r, a)
+        # image.save(f, format='png')
+        for f in FS.walk_files(raw_root, ewhites=['.pvr']):
+            sub = os.path.splitext(f)[0]
+            rgb = sub + '.png'
+            if not os.path.isfile(rgb):
+                continue
+            a = sub + '_alpha.png'
+            if not os.path.isfile(a):
+                continue
+            image = ImageTools.merge_rgb_alpha(rgb, a)
+            image.save(sub + '_final.png', format='png')
+
+    @staticmethod
+    def split_by_plist(raw_root):
+        for f in FS.walk_files(raw_root, ewhites=['.pvr']):
+            sub = os.path.splitext(f)[0]
+            png = sub + '_final.png'
+            if not os.path.isfile(png):
+                continue
+            plist = sub + '.plist'
+            if not os.path.isfile(plist):
+                continue
+            ImageTailor.tp(plist, png, fixwhite=False)

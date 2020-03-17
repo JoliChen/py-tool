@@ -131,7 +131,37 @@
 # 2、cd \Mali Developer Tools\Mali Texture Compression Tool\bin
 # 3、etcpack {your.pkm} {your.png} -ext PNG。
 import os
+import shutil
+from PIL import Image
 
-etcpack = ''
-def pkm2png(src, dst):
-    os.system(f'{etcpack} {src} {dst} -ext PNG')
+malibin = '/Users/joli/Priv/hack/Mali_Texture_Compression_Tool_v4.3.0.b81c088_MacOSX_x64/bin'
+etcpack = os.path.join(malibin, 'etcpack')
+
+def pkm2png(src, dst_dir, transpose=False, subfix=''):
+    rename_src = None
+    src_name = src[src.rfind(os.sep)+1: src.rfind('.')]
+    # print(src_name)
+    if not src.endswith('.pkm'):
+        rename_src = os.path.join(dst_dir, src_name + '.pkm')
+        # print(rename_src)
+        shutil.copyfile(src, rename_src)
+        src = rename_src
+    pkm2ppm(src, dst_dir)  # 先转成 .ppm 文件
+    if rename_src and os.path.isfile(rename_src):
+        os.remove(rename_src)
+    ppm_path = os.path.join(dst_dir, src_name + '.ppm')
+    if os.path.isfile(ppm_path):
+        image = Image.open(ppm_path)
+        if transpose:
+            image = image.transpose(Image.ROTATE_180)
+            image = image.transpose(Image.FLIP_LEFT_RIGHT)  # 左右对换
+        image.save(os.path.join(dst_dir, src_name + subfix + '.png'), format='png')
+        os.remove(ppm_path)
+
+def pkm2ppm(src, dst_dir):
+    # cmd = f'"{etcpack}" "{src}" "{dst}" -s slow -f RGBA -c etc2 -e perceptual -v -progress'
+    # cmd = f'"{etcpack}" "{src}" "{dst}" -s slow -f RGBA -c etc2 -e perceptual'
+    # cmd = f'"{etcpack}" "{src}" "{dst}" -s slow -f RGBA -c etc2'
+    cmd = f'"{etcpack}" "{src}" "{dst_dir}" -s slow'
+    # print(cmd)
+    os.system(cmd)
