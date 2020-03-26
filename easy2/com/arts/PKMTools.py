@@ -134,7 +134,7 @@ import os
 import shutil
 from PIL import Image
 
-malibin = '/Users/joli/Priv/hack/Mali_Texture_Compression_Tool_v4.3.0.b81c088_MacOSX_x64/bin'
+malibin = '/Users/joli/Priv/hack/mali/v4.3.0.b81c088_MacOSX_x64/bin'
 etcpack = os.path.join(malibin, 'etcpack')
 
 def pkm2png(src, dst_dir, transpose=False, subfix=''):

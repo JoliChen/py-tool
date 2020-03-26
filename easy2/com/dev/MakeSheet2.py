@@ -601,7 +601,7 @@ class _ULOEditor:
 
     @staticmethod
     def _write_string(ba, s):
-        print(s)
+        # print(s)
         ba.write_utf8(_Fmt.trans_str_symb(s))
 
 class _LUAEditor:

@@ -62,7 +62,7 @@ def main():
     # 开始导表
     from com.dev.MakeSheet2 import SheetBuilder
     sb = SheetBuilder().set_editor(options.data_format, options.forceone)
-    sb.gen_data(options.sheet_dir, options.data_path,
+    sb.build(options.sheet_dir, options.data_path,
                 black_list=options.black_list,
                 list_warn=options.list_warn,
                 list_error=options.list_error,
