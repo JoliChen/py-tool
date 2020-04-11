@@ -629,3 +629,13 @@ class RobZQQST(DeApkBase):  # 最强骑士团
             if not os.path.isfile(plist):
                 continue
             ImageTailor.tp(plist, png, fixwhite=False)
+
+class RobXAB1(DeApkBase):  # XAB1
+    def __init__(self):
+        DeApkBase.__init__(self, 'xab1')
+
+    def decrypt_res(self):
+        www_dir = '/Users/joli/Downloads/XAB/assets/www'
+        data_js = FS.read_text(os.path.join(www_dir, 'data.js'))[1:]
+        data_js = json.loads(data_js)
+        print(data_js)

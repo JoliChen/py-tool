@@ -5,7 +5,9 @@
 import os
 import time
 
-from jonlin.utils import FS, Collect
+from jonlin.utils import FS, Collect, Log
+
+log = Log.Logger(__file__)
 
 def test_lupa():
     import lupa
@@ -151,10 +153,15 @@ def test_stardict():
     print('create lib:', time.time() - ts)
     return 0
 
+def test_modify_csd():
+    from com.dev import MakeCSD
+    MakeCSD.main()
+
 def main():
     pass
     # test_lupa()
     # test_ttf2xml()
     # test_batch_refactor_xcplist()
-    test_split_images()
+    # test_split_images()
     # test_stardict()
+    test_modify_csd()

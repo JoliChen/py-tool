@@ -1065,36 +1065,37 @@ def main():
     working_dir = '/Users/joli/Desktop/test/asset'
     # 乱斗
     project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou'
-    target_dir = os.path.join(project_dir, 'luandou_xc/app_shenshi/package/SDDZ')
+    target_dir = os.path.join(project_dir, 'luandou_xc/app_shenshi/package/FuYao')
     source_dir = os.path.join(project_dir, 'resource/xiuxian')
     # # 战国
     # project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/zhanguo'
     # target_dir = os.path.join(project_dir, 'zhanguo_xc/app_tendo/package/sgdyx')
     # source_dir = os.path.join(project_dir, 'resource/dudai_vn')
 
-    # 打包资源
-    magic = b'#ssdz#'
-    build_pkg = os.path.join(working_dir, 'tjzsddz.bytes')
-    build_dir = os.path.join(working_dir, 'resource')
-    blur_kb = random.randint(1024, 2048) * 1024
-    fill_mb = 5
-    make_resource(build_dir, source_dir, target_dir)
-    ab = AssetBuilder(magic=magic, blend=True)
-    ab.pack(build_pkg, build_dir, blurkb=blur_kb, fillmb=fill_mb)
-    with AssetPackage(build_pkg, magic=magic) as ap:
-        ap.unpack(os.path.join(working_dir, 'unpack'), build_dir, output=True)
-    log.i('AssetBuilder blur=%dkb, fill=%fmb' % (blur_kb/1024, fill_mb))
-    FS.explorer(working_dir)
+    # # 打包资源
+    # magic = b'f-fast'
+    # build_pkg = os.path.join(working_dir, 'data.bytes')
+    # build_dir = os.path.join(working_dir, 'resource')
+    # blur_kb = random.randint(1024, 2048) * 1024
+    # fill_mb = 5
+    # make_resource(build_dir, source_dir, target_dir)
+    # ab = AssetBuilder(magic=magic, blend=True)
+    # ab.pack(build_pkg, build_dir, blurkb=blur_kb, fillmb=fill_mb)
+    # with AssetPackage(build_pkg, magic=magic) as ap:
+    #     ap.unpack(os.path.join(working_dir, 'unpack'), build_dir, output=True)
+    # log.i('AssetBuilder blur=%dkb, fill=%fmb' % (blur_kb/1024, fill_mb))
+    # FS.explorer(working_dir)
 
     # # 垃圾文件生成器
     # lb = LitterBuilder()
     # lb.build(('patch1.pkg', 'patch2.pkg'), 937, magic)
 
     # # 垃圾代码生成器
-    # codes_dir = os.path.join(working_dir, 'codes')
-    # fb = FakerBuilder(liemb=6)
-    # fb.build(codes_dir, num_ac=0, num_ui=8, num_vc=8, num_md=9)
-    # log.i('FakerBuilder liebytes:%f/%f' % (fb.use_liebytes/1024/1024, fb.max_liebytes/1024/1024))
+    codes_dir = os.path.join(working_dir, 'codes')
+    fb = FakerBuilder(liemb=5)
+    fb.build(codes_dir, num_ac=0, num_ui=21, num_vc=17, num_md=3)
+    log.i('FakerBuilder liebytes:%f/%f' % (fb.use_liebytes/1024/1024, fb.max_liebytes/1024/1024))
+    FS.explorer(codes_dir)
 
     # # 测试
     # with AssetPackage('/Users/joli/proj/sdk_uzone/trunk/projects/zhanguo/zhanguo_xc/app_tendo/package/sgdyx/game/assets/data.pkg', magic=b'tendo.data') as ap:
