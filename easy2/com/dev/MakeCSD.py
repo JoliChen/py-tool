@@ -8,7 +8,7 @@ from jonlin.utils import Log, FS
 
 log = Log.Logger(__file__)
 
-# float转字符串
+# float转字符串并保留4位小数
 def f2s(f):
     return '%.4f' % f
 
@@ -352,8 +352,8 @@ def batch_modify_button(csd_dir, tasks):
     log.i('batch_modify_button done')
 
 def simple_modify_button(csd_dir):
-    tasks = [
-        {
+    tasks = list()
+    tasks.append({
             'feature': {
                 'skin': {
                     'normal': 'anniu_cheng.png',
@@ -370,13 +370,13 @@ def simple_modify_button(csd_dir):
                     'plist': 'pic/ui/gongyong_btn.plist'
                 },
                 # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
-                'size': None,
                 # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
                 'title_outline': {'a': 255, 'r': 97, 'g': 79, 'b': 32},
-                'title_shadow': None
+                # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
             }
-        },
-        {
+        }
+    )
+    tasks.append({
             'feature': {
                 'skin': {
                     'normal': 'anniu_lv.png',
@@ -393,13 +393,13 @@ def simple_modify_button(csd_dir):
                     'plist': 'pic/ui/gongyong_btn.plist'
                 },
                 # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
-                'size': None,
                 # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
                 'title_outline': {'a': 255, 'r': 65, 'g': 90, 'b': 11},
-                'title_shadow': None
+                # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
             }
-        },
-        {
+        }
+    )
+    tasks.append({
             'feature': {
                 'skin': {
                     'normal': 'anniu_lan.png',
@@ -416,13 +416,12 @@ def simple_modify_button(csd_dir):
                     'plist': 'pic/ui/gongyong_btn.plist'
                 },
                 # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
-                'size': None,
                 # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
                 'title_outline': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
-                'title_shadow': None
+                # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
             }
         }
-    ]
+    )
     batch_modify_button(csd_dir, tasks)
 
 def main():
