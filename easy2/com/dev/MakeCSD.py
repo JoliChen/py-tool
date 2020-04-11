@@ -3,10 +3,8 @@
 # @Author  : Joli
 # @Email   : 99755349@qq.com
 
+import os
 import xml.dom.minidom
-from jonlin.utils import Log, FS
-
-log = Log.Logger(__file__)
 
 # float转字符串并保留4位小数
 def f2s(f):
@@ -25,7 +23,7 @@ class MakeCSD:
                 continue
             for t in tasks:
                 if not self.validate_button(node, t['feature']):
-                    # log.w('------------------- not validate_button')
+                    # print('------------------- not validate_button')
                     continue
                 # print(node.getAttribute('Name'))
                 # print(get_position(node))
@@ -342,14 +340,18 @@ class MakeCSD:
 ##############################################################################################
 def batch_modify_button(csd_dir, tasks):
     maker = MakeCSD()
-    for f in FS.walk_files(csd_dir, ewhites=['.csd']):
-        # f = os.path.join(csd_dir, 'conjure/conjure.csd')
-        log.i(f)
-        obuffer = maker.modify_dom_btn_skin(f, *tasks)
-        if obuffer:
+    for (par, _, files) in os.walk(csd_dir):
+        for name in files:
+            if not name.endswith('.csd'):
+                continue
+            f = os.path.join(par, name)
+            print(f)
+            buffer = maker.modify_dom_btn_skin(f, *tasks)
+            if not buffer:
+                continue
             with open(f, 'wb') as fp:
-                fp.write(obuffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
-    log.i('batch_modify_button done')
+                fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
+    print('batch_modify_button done')
 
 def simple_modify_button(csd_dir):
     tasks = list()
