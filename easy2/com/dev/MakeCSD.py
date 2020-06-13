@@ -10,16 +10,62 @@ import xml.dom.minidom
 def f2s(f):
     return '%.4f' % f
 
+kXmlNode = 'AbstractNodeData'
+kTypeText = 'TextObjectData'
+kTypeButton = 'ButtonObjectData'
+kPropFont = 'FontResource'
+kPropOutline = 'OutlineColor'
+
 class MakeCSD:
     def __init__(self):
         pass
 
+    # 修改画布中字体的描边
+    def modify_dom_outline(self, csd_file, *tasks):
+        csd_dom, changed = xml.dom.minidom.parse(csd_file), False
+        for node in csd_dom.getElementsByTagName(kXmlNode):
+            if kTypeText == node.getAttribute('ctype'):
+                color = self.get_outline(node)
+                if not color:
+                    continue
+                for t in tasks:
+                    if not self.is_equal_color(t['old'], color):
+                        continue
+                    # node.
+                    if t['new'] == 'CLOSE':
+                        if node.getAttribute('OutlineEnabled') == 'True':
+                            # node.removeNamedItem('OutlineEnabled')
+                            del node._attrs['OutlineEnabled']
+                            changed = True
+        return csd_dom.toxml(encoding='utf-8') if changed else None
+
+    # 修改画布中的字体
+    def modify_dom_font(self, csd_file, font_name):
+        csd_dom, changed = xml.dom.minidom.parse(csd_file), False
+        for node in csd_dom.getElementsByTagName(kXmlNode):
+            if kTypeButton == node.getAttribute('ctype'):
+                lable = node.getAttribute('ButtonText')
+                if lable and not lable.isspace():
+                    if font_name:
+                        if self.set_font(csd_dom, node, font_name):
+                            changed = True
+                    else:
+                        self.remove_font(node)
+                        changed = True
+            elif kTypeText == node.getAttribute('ctype'):
+                if font_name:
+                    if self.set_font(csd_dom, node, font_name):
+                        changed = True
+                else:
+                    self.remove_font(node)
+                    changed = True
+        return csd_dom.toxml(encoding='utf-8') if changed else None
+
     # 修改画布中所有的按钮皮肤
     def modify_dom_btn_skin(self, csd_file, *tasks):
-        csd_dom = xml.dom.minidom.parse(csd_file)
-        changed = False
-        for node in csd_dom.getElementsByTagName('AbstractNodeData'):
-            if 'ButtonObjectData' != node.getAttribute('ctype'):
+        csd_dom, changed = xml.dom.minidom.parse(csd_file), False
+        for node in csd_dom.getElementsByTagName(kXmlNode):
+            if kTypeButton != node.getAttribute('ctype'):
                 continue
             for t in tasks:
                 if not self.validate_button(node, t['feature']):
@@ -43,20 +89,23 @@ class MakeCSD:
         for prop in node.childNodes:
             if prop.nodeName == 'Children':
                 for child in prop.childNodes:
-                    if child.nodeName == 'AbstractNodeData':
+                    if child.nodeName == kXmlNode:
                         children.append(child)
             elif prop.nodeName == 'NormalFileData':
-                prop.setAttribute('Path', skin['normal'])
-                if 'plist' in skin:
-                    self.set_plist_prop(prop, skin['plist'])
+                if skin:
+                    prop.setAttribute('Path', skin['normal'])
+                    if 'plist' in skin:
+                        self.set_plist_prop(prop, skin['plist'])
             elif prop.nodeName == 'PressedFileData':
-                prop.setAttribute('Path', skin['pressed'])
-                if 'plist' in skin:
-                    self.set_plist_prop(prop, skin['plist'])
+                if skin:
+                    prop.setAttribute('Path', skin['pressed'])
+                    if 'plist' in skin:
+                        self.set_plist_prop(prop, skin['plist'])
             elif prop.nodeName == 'DisabledFileData':
-                prop.setAttribute('Path', skin['disabled'])
-                if 'plist' in skin:
-                    self.set_plist_prop(prop, skin['plist'])
+                if skin:
+                    prop.setAttribute('Path', skin['disabled'])
+                    if 'plist' in skin:
+                        self.set_plist_prop(prop, skin['plist'])
         if children:
             for child in children:
                 if child.getAttribute('ctype') == 'TextObjectData':
@@ -231,6 +280,19 @@ class MakeCSD:
             return False
         return True
 
+    # 判断颜色是否一样
+    @staticmethod
+    def is_equal_color(c4b1, c4b2):
+        if c4b1['a'] != c4b2['a']:
+            return False
+        if c4b1['r'] != c4b2['r']:
+            return False
+        if c4b1['g'] != c4b2['g']:
+            return False
+        if c4b1['b'] != c4b2['b']:
+            return False
+        return True
+
     # 设置颜色
     @staticmethod
     def set_prop_color(prop, color):
@@ -252,6 +314,17 @@ class MakeCSD:
             if prop.nodeName == 'OutlineColor':
                 self.set_prop_color(prop, color)
                 break
+    # 获取描边
+    @staticmethod
+    def get_outline(node):
+        for prop in node.childNodes:
+            if prop.nodeName == 'OutlineColor':
+                return {
+                    'a': int(prop.getAttribute('A')),
+                    'r': int(prop.getAttribute('R')),
+                    'g': int(prop.getAttribute('G')),
+                    'b': int(prop.getAttribute('B')),
+                }
 
     # 设置阴影
     def set_shadow(self, node, color):
@@ -322,6 +395,36 @@ class MakeCSD:
                 x, y = prop.getAttribute('X'), prop.getAttribute('Y')
                 return float(x) if x else 0, float(y) if y else 0
 
+    @staticmethod
+    def set_font(dom, node, font_name):
+        prop, changed = None, False
+        for p in node.childNodes:
+            if p.nodeName == kPropFont:
+                prop = p
+                break
+        if not prop:
+            prop = dom.createElement(kPropFont)
+            node.appendChild(dom.createTextNode('  '))
+            node.appendChild(prop)
+            node.appendChild(dom.createTextNode('\n                  '))
+        if prop.getAttribute('Type') != 'Normal':
+            prop.setAttribute('Type', 'Normal')
+            changed = True
+        if prop.getAttribute('Plist') != '':
+            prop.setAttribute('Plist', '')
+            changed = True
+        if prop.getAttribute('Path') != font_name:
+            prop.setAttribute('Path', font_name)
+            changed = True
+        return changed
+
+    @staticmethod
+    def remove_font(node):
+        for prop in node.childNodes:
+            if prop.nodeName == kPropFont:
+                node.childNodes.remove(prop)
+                break
+
     # 设置plist
     @staticmethod
     def set_plist_prop(prop, plist):
@@ -355,80 +458,147 @@ def batch_modify_button(csd_dir, tasks):
 
 def simple_modify_button(csd_dir):
     tasks = list()
+    # tasks.append({
+    #         'feature': {
+    #             'skin': {
+    #                 'normal': 'anniu_cheng.png',
+    #                 # 'pressed': 'anniu_cheng.png',
+    #                 # 'disabled': 'anniu_cheng.png',
+    #                 'plist': 'pic/ui/gongyong_btn.plist'
+    #             }
+    #         },
+    #         'new': {
+    #             'skin': {
+    #                 'normal': 'gongyong_anniu_1.png',
+    #                 'pressed': 'gongyong_anniu_1.png',
+    #                 'disabled': 'gongyong_anniu_3.png',
+    #                 'plist': 'pic/ui/gongyong_btn.plist'
+    #             },
+    #             # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
+    #             # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+    #             'title_outline': {'a': 255, 'r': 97, 'g': 79, 'b': 32},
+    #             # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+    #         }
+    #     }
+    # )
+    # tasks.append({
+    #         'feature': {
+    #             'skin': {
+    #                 'normal': 'anniu_lv.png',
+    #                 # 'pressed': 'anniu_lv.png',
+    #                 # 'disabled': 'anniu_lv.png',
+    #                 'plist': 'pic/ui/gongyong_btn.plist'
+    #             }
+    #         },
+    #         'new': {
+    #             'skin': {
+    #                 'normal': 'gongyong_anniu_4.png',
+    #                 'pressed': 'gongyong_anniu_4.png',
+    #                 'disabled': 'gongyong_anniu_3.png',
+    #                 'plist': 'pic/ui/gongyong_btn.plist'
+    #             },
+    #             # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
+    #             # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+    #             'title_outline': {'a': 255, 'r': 65, 'g': 90, 'b': 11},
+    #             # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+    #         }
+    #     }
+    # )
+    # tasks.append({
+    #         'feature': {
+    #             'skin': {
+    #                 'normal': 'anniu_lan.png',
+    #                 # 'pressed': 'anniu_lan.png',
+    #                 # 'disabled': 'anniu_lan.png',
+    #                 'plist': 'pic/ui/gongyong_btn.plist'
+    #             }
+    #         },
+    #         'new': {
+    #             'skin': {
+    #                 'normal': 'gongyong_anniu_5.png',
+    #                 'pressed': 'gongyong_anniu_5.png',
+    #                 'disabled': 'gongyong_anniu_3.png',
+    #                 'plist': 'pic/ui/gongyong_btn.plist'
+    #             },
+    #             # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
+    #             # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+    #             'title_outline': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
+    #             # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+    #         }
+    #     }
+    # )
     tasks.append({
-            'feature': {
-                'skin': {
-                    'normal': 'anniu_cheng.png',
-                    # 'pressed': 'anniu_cheng.png',
-                    # 'disabled': 'anniu_cheng.png',
-                    'plist': 'pic/ui/gongyong_btn.plist'
-                }
-            },
-            'new': {
-                'skin': {
-                    'normal': 'gongyong_anniu_1.png',
-                    'pressed': 'gongyong_anniu_1.png',
-                    'disabled': 'gongyong_anniu_3.png',
-                    'plist': 'pic/ui/gongyong_btn.plist'
-                },
-                # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
-                # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
-                'title_outline': {'a': 255, 'r': 97, 'g': 79, 'b': 32},
-                # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+        'feature': {
+            'skin': {
+                'normal': 'gongyong_anniu_1.png'
             }
+        },
+        'new': {
+            'title_color': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
+            'title_outline': {'a': 255, 'r': 97, 'g': 59, 'b': 32},
         }
-    )
+    })
     tasks.append({
-            'feature': {
-                'skin': {
-                    'normal': 'anniu_lv.png',
-                    # 'pressed': 'anniu_lv.png',
-                    # 'disabled': 'anniu_lv.png',
-                    'plist': 'pic/ui/gongyong_btn.plist'
-                }
-            },
-            'new': {
-                'skin': {
-                    'normal': 'gongyong_anniu_4.png',
-                    'pressed': 'gongyong_anniu_4.png',
-                    'disabled': 'gongyong_anniu_3.png',
-                    'plist': 'pic/ui/gongyong_btn.plist'
-                },
-                # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
-                # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
-                'title_outline': {'a': 255, 'r': 65, 'g': 90, 'b': 11},
-                # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+        'feature': {
+            'skin': {
+                'normal': 'gongyong_anniu_4.png'
             }
+        },
+        'new': {
+            'title_color': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
+            'title_outline': {'a': 255, 'r': 38, 'g': 92, 'b': 35},
         }
-    )
+    })
     tasks.append({
-            'feature': {
-                'skin': {
-                    'normal': 'anniu_lan.png',
-                    # 'pressed': 'anniu_lan.png',
-                    # 'disabled': 'anniu_lan.png',
-                    'plist': 'pic/ui/gongyong_btn.plist'
-                }
-            },
-            'new': {
-                'skin': {
-                    'normal': 'gongyong_anniu_5.png',
-                    'pressed': 'gongyong_anniu_5.png',
-                    'disabled': 'gongyong_anniu_3.png',
-                    'plist': 'pic/ui/gongyong_btn.plist'
-                },
-                # 'size': {'width': 182, 'height': 62, 'offset': (0, 3), 'edge': (20, 20, 8, 8)},
-                # 'title_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
-                'title_outline': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
-                # 'title_shadow': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+        'feature': {
+            'skin': {
+                'normal': 'gongyong_anniu_5.png'
             }
+        },
+        'new': {
+            'title_color': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
+            'title_outline': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
         }
-    )
+    })
     batch_modify_button(csd_dir, tasks)
+
+def simple_modify_font(csd_dir):
+    maker = MakeCSD()
+    for (par, _, files) in os.walk(csd_dir):
+        for name in files:
+            if not name.endswith('.csd'):
+                continue
+            f = os.path.join(par, name)
+            print(f)
+            buffer = maker.modify_dom_font(f, 'font/AdobeHeit.ttf')
+            if not buffer:
+                continue
+            with open(f, 'wb') as fp:
+                fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
+
+def simple_modify_outline(csd_dir):
+    maker = MakeCSD()
+    for (par, _, files) in os.walk(csd_dir):
+        for name in files:
+            if not name.endswith('.csd'):
+                continue
+            f = os.path.join(par, name)
+            # f = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb/Login/fenbao.csd'
+            print(f)
+            buffer = maker.modify_dom_outline(f, *[{
+                'old': {'a': 255, 'r': 136, 'g': 76, 'b': 16},
+                'new': 'CLOSE'
+            }])
+            if not buffer:
+                continue
+            with open(f, 'wb') as fp:
+                fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
 
 def main():
     csd_dir = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb'
-    simple_modify_button(csd_dir)
+    # simple_modify_button(csd_dir)
+    # simple_modify_font(csd_dir)
+    simple_modify_outline(csd_dir)
 
 if __name__ == '__main__':
     main()

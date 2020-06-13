@@ -155,8 +155,10 @@ def pkm2png(src, dst_dir, transpose=False, subfix=''):
         if transpose:
             image = image.transpose(Image.ROTATE_180)
             image = image.transpose(Image.FLIP_LEFT_RIGHT)  # 左右对换
-        image.save(os.path.join(dst_dir, src_name + subfix + '.png'), format='png')
+        png_path = os.path.join(dst_dir, src_name + subfix + '.png')
+        image.save(png_path)
         os.remove(ppm_path)
+        return png_path
 
 def pkm2ppm(src, dst_dir):
     # cmd = f'"{etcpack}" "{src}" "{dst}" -s slow -f RGBA -c etc2 -e perceptual -v -progress'

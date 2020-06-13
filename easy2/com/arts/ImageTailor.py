@@ -29,8 +29,8 @@ def tp(plistpath, imagepath=None, outputdir=None, fixwhite=True):
 
     src_img = Image.open(imagepath)  # 打开图像
     for k, v in plist['frames'].items():
-        if not k.endswith('.png'):
-            continue
+        # if not k.endswith('.png'):
+        #     continue
         if 'frame' in v:
             _tp_crop_3(src_img, outputdir, k, v, fixwhite)
         elif 'textureRect' in v:
@@ -49,7 +49,10 @@ def _tp_crop_3(src_img, outputdir, k, v, fixwhite):
     if isrotated:
         # box_img = box_img.rotate(90)
         cell_img = cell_img.transpose(Image.ROTATE_90)
-    outfile = os.path.join(outputdir, k)
+    if k.endswith('.png'):
+        outfile = os.path.join(outputdir, k)
+    else:
+        outfile = os.path.join(outputdir, k + '.png')
     if not fixwhite:
         cell_img.save(outfile)
         return
@@ -74,7 +77,10 @@ def _tp_crop_2(src_img, outputdir, k, v, fixwhite):
     if isrotated:
         # box_img = box_img.rotate(90)
         cell_img = cell_img.transpose(Image.ROTATE_90)
-    outfile = os.path.join(outputdir, os.path.basename(k))
+    if k.endswith('.png'):
+        outfile = os.path.join(outputdir, os.path.basename(k))
+    else:
+        outfile = os.path.join(outputdir, os.path.basename(k) + '.png')
     if not fixwhite:
         cell_img.save(outfile)
         return

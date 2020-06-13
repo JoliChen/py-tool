@@ -12,21 +12,31 @@ log = Log.Logger(__file__)
 
 APK2DIR = '/Users/joli/Priv/android/apktool'
 # APK2JAR = os.path.join(APK2DIR, 'apktool_2.3.0.jar')
-APK2JAR = os.path.join(APK2DIR, 'apktool_2.4.0.jar')
+# APK2JAR = os.path.join(APK2DIR, 'apktool_2.4.0.jar')
 
 def dapk(apk, dist):  # 反编APK
-    return Shell.run('java -Djava.awt.headless=true -jar %s d -f -o %s %s' % (APK2JAR, dist, apk))
+    # return Shell.run('java -Djava.awt.headless=true -jar %s d -f -o %s %s' % (APK2JAR, dist, apk))
+    prevdir = os.path.abspath(os.curdir)
+    os.chdir(APK2DIR)
+    ret = os.system('source %s/apktool d -o %s %s' % (APK2DIR, dist, apk))
+    os.chdir(prevdir)
+    return ret
 
 def bapk(dist, apk):  # 回编APK
-    return Shell.run('java -Djava.awt.headless=true -jar %s b -f -o %s %s' % (APK2JAR, apk, dist))
+    # return Shell.run('java -Djava.awt.headless=true -jar %s b -f -o %s %s' % (APK2JAR, apk, dist))
+    prevdir = os.path.abspath(os.curdir)
+    os.chdir(APK2DIR)
+    ret = os.system('source %s/apktool b -o %s %s' % (APK2DIR, apk, dist))
+    os.chdir(prevdir)
+    return ret
 
 def sign(unsign_apk, signed_apk, sign_config=None):  # 签名APK
     if sign_config is None:
         sign_config = {
-            'keystore': os.path.join(APK2DIR, 'sign/myapk.jks'),
+            'keystore': os.path.join(APK2DIR, 'signer/my.keystore'),
             'storepwd': '666666',
             'keypwd': '666666',
-            'alias': 'joli'
+            'alias': 'android.keystore'
         }
     return Shell.run('jarsigner -verbose -keystore %s -storepass %s -keypass %s -signedjar %s %s %s' % (
         sign_config['keystore'],

@@ -3,6 +3,7 @@
 # @Author  : Joli
 # @Email   : 99755349@qq.com
 import os
+import shutil
 import time
 
 from jonlin.utils import FS, Collect, Log
@@ -157,11 +158,111 @@ def test_modify_csd():
     from com.dev import MakeCSD
     MakeCSD.main()
 
+def test_build_resource():
+    from PIL import Image
+
+    def _build_file(src, dst):
+        FS.make_parent(dst)
+        if src.endswith('.jpg'):
+            im = Image.open(src)
+            try:
+                im.save(dst)
+            except:
+                print('convert', src)
+                im.convert('RGB').save(dst)
+            return
+        if src.endswith('.png'):
+            im = Image.open(src)
+            try:
+                im.save(dst)
+            except:
+                print('convert', src)
+                im.convert('RGBA').save(dst)
+            return
+        shutil.copyfile(src, dst)
+
+    def _extract_file(src, dst):
+        if src.endswith('.jpg') or src.endswith('.png'):
+            FS.make_parent(dst)
+            shutil.copyfile(src, dst)
+
+    def _batch_build():
+        dst_dir = '/Users/joli/Downloads/Hack/slim/shan'
+        res_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou/resource/shan'
+        shutil.rmtree(dst_dir)
+        file_count = 0
+        for fn in sorted(FS.walk_files(res_dir, cut=len(res_dir)+1)):
+            print(file_count + 1, fn)
+            src = os.path.join(res_dir, fn)
+            dst = os.path.join(dst_dir, fn)
+            # _build_file(src, dst)
+            _extract_file(src, dst)
+            file_count = file_count + 1
+        print('build %d file done' % file_count)
+    # _batch_build()
+
+    _build_file('/Users/joli/Downloads/Hack/slim/0.png',
+                '/Users/joli/Downloads/Hack/slim/1.png')
+
+# 检查图片后缀是否与格式相符
+def test_check_images():
+    from simples.rob import RobCom
+    res_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou/resource/shan/res'
+    jpg_err, png_err = {}, {}
+    for (parent, _, files) in os.walk(res_dir):
+        for name in files:
+            if name.endswith('.jpg'):
+                fn = os.path.join(parent, name)
+                with open(fn, 'rb') as fp:
+                    magic = fp.read(2)
+                    if magic != RobCom.JPG_BEG:
+                        jpg_err[fn] = magic
+            elif name.endswith('.png'):
+                fn = os.path.join(parent, name)
+                with open(fn, 'rb') as fp:
+                    magic = fp.read(8)
+                    if magic != RobCom.PNG_BEG:
+                        png_err[fn] = magic
+    for k in sorted(jpg_err.keys()):
+        print(k, jpg_err[k])
+    print('-------------------------------------')
+    for k in sorted(png_err.keys()):
+        print(k, png_err[k])
+
+# 检查特效图是否重名
+def test_check_flashx():
+    import biplist
+    flashx_dir = '/Users/joli/Work/LightPro/Client/dazhanguo/res/dest'
+    itemname_map = {}
+    bad_name_map = {}
+    for (parent, _, files) in os.walk(flashx_dir):
+        for name in files:
+            if name.endswith('.plist'):
+                fn = os.path.join(parent, name)
+                plist = biplist.readPlist(fn)
+                for k in plist['frames']:
+                    if k in itemname_map:
+                        array = bad_name_map.get(k)
+                        if not array:
+                            array = []
+                            bad_name_map[k] = array
+                            array.append(itemname_map[k])
+                        array.append(fn)
+                    else:
+                        itemname_map[k] = fn
+    for k, v in bad_name_map.items():
+        print('-----------', k)
+        print('\n'.join(v))
+    print('done')
+
 def main():
-    pass
     # test_lupa()
     # test_ttf2xml()
     # test_batch_refactor_xcplist()
     # test_split_images()
     # test_stardict()
-    test_modify_csd()
+    # test_modify_csd()
+    # test_build_resource()
+    # test_check_images()
+    test_check_flashx()
+    pass

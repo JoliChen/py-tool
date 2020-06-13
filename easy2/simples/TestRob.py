@@ -503,19 +503,49 @@ def test_json2excel():
                 row.append(demjson.encode(newitem, encoding='UTF-8'))
                 sheet.append(row)
 
-    def _build_book1(book, config, title):
-        active = False
-        if isinstance(config, dict):
-            for k in config.keys():
-                data = config[k]
-                print(f'--------------------- {k}')
-                if active:
-                    _build_sheet1(book.create_sheet(k), data, k)
+    def _build_book1(book, config, title, roots=None):
+        content, actived = None, False
+        if roots:
+            for r in roots:
+                content = config.get(r)
+                if content:
+                    break
+        content = content if content else config
+        if isinstance(content, dict):
+            for title in content.keys():
+                print(f'--------------------- book:{title}')
+                data = content[title]
+                is_sub = True
+                for v in data.values():
+                    for sv in v.values():
+                        if not isinstance(sv, dict) and not isinstance(sv, list):
+                            is_sub = False
+                            break
+                if is_sub:
+                    for k, v in data.items():
+                        k = k.replace('?', '_')
+                        if actived:
+                            if book.__contains__(k):
+                                b = book.get_sheet_by_name(k)
+                            else:
+
+                                b = book.create_sheet(k)
+                        else:
+                            actived = True
+                            b = book.active
+                        _build_sheet1(b, v, k)
                 else:
-                    active = True
-                    _build_sheet1(book.active, data, k)
+                    if actived:
+                        if book.__contains__(title):
+                            b = book.get_sheet_by_name(title)
+                        else:
+                            b = book.create_sheet(title)
+                    else:
+                        actived = True
+                        b = book.active
+                    _build_sheet1(b, data, title)
         else:
-            _build_sheet1(book.active, config, title)
+            _build_sheet1(book.active, content, title)
 
     def _build_book2(book, config, title):
         if 'm' in config and 'd' in config:
@@ -535,19 +565,24 @@ def test_json2excel():
                 print('unexcept config format:', title)
 
     def _output1():
-        src = '/Users/joli/Downloads/configIOS_json190731'
-        dst = '/Users/joli/Downloads/configIOS_excel'
-        for filename in FS.walk_files(src, ewhites=['.json'], cut=len(src) + 1):
-            print('------------------------------------', filename)
-            name = FS.filename(filename)
-            conf = demjson.decode_file(os.path.join(src, filename))
+        src = '/Users/joli/Documents/AndroidStudio/DeviceExplorer/emulator-5554/data/data/com.lilithgames.hgame.cn/files/jsonc_dir'
+        dst = '/Users/joli/Documents/AndroidStudio/DeviceExplorer/emulator-5554/data/data/com.lilithgames.hgame.cn/files/excel_dir'
+        for fn in FS.walk_files(src, ewhites=['.json'], cut=len(src) + 1):
+            if fn.endswith('languageDb.json'):
+                continue
+            file = os.path.join(src, fn)
+            print('------------------------------------------', file)
+            conf = demjson.decode_file(file)
             if not conf:
                 print('empty config')
                 continue
+            name = FS.filename(file)
             wb = openpyxl.Workbook()
             # print(wb.get_sheet_names())
-            _build_book2(wb, conf, name)
-            wb.save(os.path.join(dst, name + '.xlsx'))
+            _build_book1(wb, conf, name, ('ed', 'hg'))
+            dstfile = os.path.join(dst, name + '.xlsx')
+            FS.make_parent(dstfile)
+            wb.save(dstfile)
 
     def _output2():
         json_ver = '/Users/joli/Downloads/fy/assets/game/resource/1_00.58_version.json'
@@ -577,12 +612,13 @@ def test_json2excel():
             wb.save(df)
             # break
 
-    _output2()
+    _output1()
+    # _output2()
     print('done')
 
 def test_hack_apk():
     from simples.rob import RobAPK
-    deapk = RobAPK.RobXAB1()
+    deapk = RobAPK.RobJYYZ()
     # deapk.decompile()
     # deapk.reinstall()
     # deapk.extract_files()

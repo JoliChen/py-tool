@@ -92,16 +92,6 @@ def walk_files(root, ewhites=None, eblacks=None, cut=0):
                 array.append(path)
     return array
 
-# 对比文件A与文件B的元数据是否相同。
-def equal_stat(a, b, see_size=True):
-    s1 = os.stat(a)
-    s2 = os.stat(b)
-    if see_size and s1.st_size != s2.st_size:
-        return False
-    if round(s1.st_mtime, 3) != round(s2.st_mtime, 3):  # 精确到毫秒
-        return False
-    return True
-
 # 将 src_dir 合并到 dst_dir
 def merge_tree(srcdir, dstdir, copy_file_func=shutil.copy2):
     if not os.path.isdir(dstdir):
@@ -118,10 +108,21 @@ def merge_tree(srcdir, dstdir, copy_file_func=shutil.copy2):
 def fast_merge_tree(srcdir, dstdir):
     merge_tree(srcdir, dstdir, fast_replace)
 
+# 通过文件的元数据检查文件是否修改
+def fast_check_modify(src, dst, ignore_size=False):
+    src_meta = os.stat(src)
+    dst_meta = os.stat(dst)
+    if not ignore_size:
+        if src_meta.st_size != dst_meta.st_size:
+            return True  # 文件大小不一致
+    if round(src_meta.st_mtime, 3) != round(dst_meta.st_mtime, 3):
+        return True  # 文件修改时间不一致（精确到秒）
+    return False  # 文件未修改
+
 # 快速替换文件 (检查文件元信息是否变更)
 def fast_replace(src, dst):
-    if os.path.isfile(dst) and equal_stat(src, dst):
-        return
+    if os.path.isfile(dst) and not fast_check_modify(src, dst):
+        return  # 文件未修改则忽略本次拷贝
     log.d('fast_copy:', src, dst)
     shutil.copy2(src, dst)
 

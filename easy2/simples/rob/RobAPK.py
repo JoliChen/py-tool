@@ -5,6 +5,7 @@
 import base64
 import json
 import os
+import shutil
 import xml.etree.ElementTree as ET
 from androguard.core.bytecodes import axml
 
@@ -22,21 +23,21 @@ class DeApkBase:
         self.name = name
         self.appid = ''
 
-    def decompile(self, zipopt=False):
+    def decompile(self, unz_opt=False):
         apk = os.path.join(self.root, self.name + '.apk')
-        if zipopt:
+        if unz_opt:
             ret = APKTool.unzapk(apk, self.dist)
         else:
             ret = APKTool.dapk(apk, self.dist)
         print('decompile apk done, ret:', ret)
         if 0 != ret:
             return
-        self.load_manifest(zipopt)
+        self.load_manifest(unz_opt)
 
-    def reinstall(self, zipopt=False):
-        self.load_manifest(zipopt)
+    def reinstall(self, unz_opt=False):
+        self.load_manifest(unz_opt)
         unsign_apk = os.path.join(self.root, self.name + '_unsign.apk')
-        if zipopt:
+        if unz_opt:
             ret = APKTool.zipapk(self.dist, unsign_apk)
         else:
             ret = APKTool.bapk(self.dist, unsign_apk)
@@ -55,8 +56,8 @@ class DeApkBase:
         # os.remove(signed_apk)
         print('install apk done, ret:', ret)
 
-    def load_manifest(self, isbinary=False):
-        if isbinary:
+    def load_manifest(self, bin_opt=False):
+        if bin_opt:
             with open(self.mxml, 'rb') as fp:
                 axmlp = axml.AXMLPrinter(fp.read())
             etree = ET.fromstring(axmlp.get_xml())
@@ -639,3 +640,69 @@ class RobXAB1(DeApkBase):  # XAB1
         data_js = FS.read_text(os.path.join(www_dir, 'data.js'))[1:]
         data_js = json.loads(data_js)
         print(data_js)
+
+class RobJYYZ(DeApkBase):  # 莉莉丝-剑与远征
+    def __init__(self):
+        DeApkBase.__init__(self, 'jyyz')
+
+    @staticmethod
+    def decrypt_res():
+        assets_dir = '/Users/joli/Downloads/Hack/jyyz/assets'
+        for fp in FS.walk_files(assets_dir, ewhites=['.pvr']):
+            fd = os.path.dirname(fp)
+            rgb_path = PKMTools.pkm2png(fp, fd, transpose=False)
+            if not rgb_path:
+                continue
+            fn = FS.filename(rgb_path)
+            a_path = os.path.join(fd, fn + '.pvr@alpha')
+            if os.path.isfile(a_path):
+                a_path = PKMTools.pkm2png(a_path, fd, transpose=False, subfix='_alpha')
+                png_path = os.path.join(fd, fn + '_final.png')
+                image = ImageTools.merge_rgb_alpha(rgb_path, a_path)
+                image.save(png_path)
+            else:
+                png_path = rgb_path
+            plist_path = os.path.join(fd, fn + '.plist')
+            if os.path.isfile(plist_path):
+                ImageTailor.tp(plist_path, png_path, fixwhite=False)
+
+    @staticmethod
+    def extract_files():
+        assets_dir = '/Users/joli/Downloads/Hack/jyyz/assets'
+        config_map = {}
+        for fn in FS.walk_files(assets_dir, ewhites=['.jsonc'], cut=len(assets_dir)+1):
+            config_map[FS.filename(fn)] = 1
+        for fn in sorted(config_map.keys()):
+            print('"' + fn + '",')
+
+class RobMJFY(DeApkBase):  # 萌将风云
+    def __init__(self):
+        DeApkBase.__init__(self, 'mjfy')
+
+    def decrypt_res(self):
+        assets_dir = '/Users/joli/Downloads/Hack/com'
+        for name in os.listdir(assets_dir):
+            self.decrypt_pkm(os.path.join(assets_dir, name))
+
+    @staticmethod
+    def decrypt_pkm(pkm_dir):
+        for name in os.listdir(pkm_dir):
+            if not name.endswith('.pkm'):
+                continue
+            PKMTools.pkm2png(os.path.join(pkm_dir, name), pkm_dir, transpose=False)
+
+            name = FS.filename(name)  # 去掉后缀
+            png_img = os.path.join(pkm_dir, name + '_image.png')
+            png_rgb = os.path.join(pkm_dir, name + '.png')
+            if os.path.isfile(png_rgb):
+                png_a = os.path.join(pkm_dir, name + '_a.png')
+                if os.path.isfile(png_a):
+                    image = ImageTools.merge_rgb_alpha(png_rgb, png_a)
+                    image.save(png_img, format='png')
+                else:
+                    shutil.copyfile(png_rgb, png_img)
+
+            plist = os.path.join(pkm_dir, name + '.plist')
+            if os.path.isfile(png_img) and os.path.isfile(plist):
+                ImageTailor.tp(plist, png_img, fixwhite=True)
+            break

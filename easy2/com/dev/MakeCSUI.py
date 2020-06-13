@@ -11,8 +11,13 @@ from jonlin.utils import Log, FS
 log = Log.Logger(__file__)
 
 VERSION = 6
+RE_COMMA_END = re.compile(',(\s*?)$')  # 行尾逗号
+RE_RAW_BEGIN = re.compile('\[(=*?)\[')  # "[==["
+RE_RAW_END = re.compile('\](=*?)\]\)(\s*?)$')  # "]==])\n"
+RE_SETNODE = re.compile(':setNode\((.*?)\)(\s*?)$')  # setNode()
 
 class LuaCSBuilder:
+
     def __init__(self, flag_dangling=2, flag_hidden=1, flag_repeat=0):
         self._flag_dangling = flag_dangling
         self._flag_hidden = flag_hidden
@@ -28,8 +33,6 @@ class LuaCSBuilder:
         log.i('build csui done, 耗时:%.2fs' % (time.time() - start_t))
 
     def _build_dir(self, src, dst):
-        md5_list = FileMD5List(os.path.join(src, '.md5.o'), hide=True)
-        is_force = md5_list.get_version() != VERSION
         split_pos = len(src) + 1
         for (root, _, files) in os.walk(src):
             for name in files:
@@ -38,17 +41,27 @@ class LuaCSBuilder:
                 src_path = os.path.join(root, name)
                 name = src_path[split_pos:]
                 dst_path = os.path.join(dst, name)
-                md5_list.update(name, src_path)
-                if is_force or md5_list.isdiff(name) or not os.path.isfile(dst_path):
-                    self._build_lua(src_path, dst_path)
-        md5_list.save(VERSION)
+                if os.path.isfile(dst_path):
+                    if not FS.fast_check_modify(src_path, dst_path, ignore_size=True):
+                        continue  # 文件未修改
+                self._build_lua(src_path, dst_path)
 
     def _build_lua(self, src, dst):
         log.i(src)
         self._cstree.input_init()
         with open(src, 'r', encoding='utf-8') as fp:
+            line, comma_open = '', False
             for s in fp.readlines():
-                self._cstree.input_line(s)
+                if RE_COMMA_END.search(s):
+                    line += s.strip()
+                    comma_open = True
+                    continue
+                if comma_open:
+                    line += s.strip()
+                    self._cstree.input_line(line)
+                    line, comma_open = '', False
+                else:
+                    self._cstree.input_line(s)
         text = self._cstree.build(self._flag_dangling, self._flag_hidden, self._flag_repeat)
         if text is None:
             log.e('build text error:', src)
@@ -61,9 +74,6 @@ class CSTree:
     EDGE_VAR = 'edgeEnabled'
     TAB_NAME = 'result'
     KEYWORDS = (TAB_NAME, EDGE_VAR, 'animation', 'root', 'layout', 'innerCSD', 'innerProject', 'localFrame', 'localLuaFile', 'luaCS')
-    R_RAWSTR = re.compile('\[(=*?)\[')  # "[==["
-    R_RAWEND = re.compile('\](=*?)\]\)(\s*?)$')  # "]==])\n"
-    R_SETNODE = re.compile(':setNode\((.*?)\)(\s*?)$')
 
     class CSNode:
         def __init__(self, name, create):
@@ -302,7 +312,7 @@ class CSTree:
         if s.startswith("local "):
             self._onvar(s)
             return
-        if self._is_result_sub(s):
+        if self._is_result_token(s):
             self._onsub(s)
         else:
             self._onrow(s)
@@ -332,7 +342,7 @@ class CSTree:
         if self._in_animate == 2:
             return  # 跳过第二行
         s = s.strip()
-        if self.R_SETNODE.search(s):
+        if RE_SETNODE.search(s):
             left = s.rfind('(')
             name = self._get_node_name(s[left+1:-1])
             self._anim_nodes.add(name)
@@ -369,7 +379,7 @@ class CSTree:
         self._widgets.insert(0, node)
 
     def _onrow(self, s):
-        if self._in_rawstr > 0 or self.R_RAWSTR.search(s):
+        if self._in_rawstr > 0 or RE_RAW_BEGIN.search(s):
             self._onrstr(s)
             return
         if not s.isspace():
@@ -378,7 +388,7 @@ class CSTree:
     # raw string
     def _onrstr(self, s):
         self._rawstring += s
-        if not self.R_RAWEND.search(s):
+        if not RE_RAW_END.search(s):
             self._in_rawstr += 1
             return
         s = self._rawstring
@@ -497,9 +507,7 @@ class CSTree:
             log.w('unexpected tolua api:', s)
 
     def _get_node_name(self, token):
-        if self._is_result_sub(token):
-            return self._get_subkey(token)
-        return token
+        return token if not self._is_result_token(token) else self._get_subkey(token)
 
     def _scan_create(self, s, start):
         assignment = s.find('=', start)
@@ -528,7 +536,7 @@ class CSTree:
                 b = True
 
     @staticmethod
-    def _is_result_sub(s):
+    def _is_result_token(s):
         return s.startswith('result[')
 
     @staticmethod
@@ -542,39 +550,3 @@ class CSTree:
 
     def _last_node(self):
         return self._widgets[0]
-
-# 文件MD5记录
-class FileMD5List:
-    def __init__(self, path, hide=False):
-        self._path = path
-        self._hide = hide
-        self._new_map = {'version': 0, 'manifest': {}}
-        self._old_map = {}
-        self.load()
-
-    def load(self):
-        if not os.path.isfile(self._path):
-            return
-        if self._hide:
-            FS.set_file_archive(self._path)
-        self._old_map = json.loads(FS.read_text(self._path))
-        if self._hide:
-            FS.set_file_hidden(self._path)
-
-    def save(self, version):
-        self._new_map['version'] = version
-        if self._hide:
-            FS.set_file_archive(self._path)
-        FS.write_text(self._path, json.dumps(self._new_map, indent=4))
-        if self._hide:
-            FS.set_file_hidden(self._path)
-
-    def update(self, key, filepath):
-        self._new_map['manifest'][key] = FS.md5(filepath)
-
-    def isdiff(self, key):   # 对比MD5是否不同
-        old = self._old_map.get('manifest')
-        return (not old) or old.get(key) != self._new_map['manifest'].get(key)
-
-    def get_version(self):  # 获取就记录版本号
-        return self._old_map.get('version')

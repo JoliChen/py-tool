@@ -41,8 +41,9 @@ def pull(src, dst, device=None):  # 从手机上传到电脑
 
 def install(apk, appid=None, device=None):  # 安装应用
     if appid and appid in list_packages(device):
-        retcode = Shell.run(fmt('uninstall %s' % appid, device))
-        assert 0 == retcode, 'uninstall apk fail:%d' % retcode
+        # retcode = Shell.run(fmt('uninstall %s' % appid, device))
+        # assert 0 == retcode, 'uninstall apk fail:%d' % retcode
+        return Shell.run(fmt('install -r %s' % apk, device))
     return Shell.run(fmt('install %s' % apk, device))
 
 def screenshot(image='/sdcard/screenshot.png', device=None):  # 在手机上截图
