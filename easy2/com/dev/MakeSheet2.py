@@ -3,6 +3,7 @@
 # @Author  : Joli
 # @Email   : 99755349@qq.com
 import json
+import math
 import os
 import sys
 import re
@@ -14,7 +15,7 @@ from jonlin.utils import Log, Bit, FS, Collect, Text
 
 log = Log.Logger(__file__)
 
-VERSION = 6
+VERSION = 7
 
 class _Fmt:
     NO_DIFF_FLAG = 1
@@ -196,9 +197,8 @@ class SheetBuilder:
         start_t = time.time()
         black_list = None if black_list is None else black_list.split(',')
         self._lookup_dict, self._excel_warns, self._excel_errors = {}, {}, {}
-        md5_list = FileMD5List(os.path.join(excel_dir, '.version.o'), hide=True)
-        is_force = md5_list.get_version() != VERSION  # 检查版本号是否匹配
-        is_force = self._editor.edit_begin(out_path, is_force)
+        metalist = FileMetaList(os.path.join(excel_dir, '.version.o'), hide=True)
+        is_force = self._editor.edit_begin(out_path, is_force=metalist.isupgrade(VERSION))
         for _, _, files in os.walk(excel_dir):
             for filename in files:
                 if filename.startswith('~') or not filename.endswith('.xlsx'):
@@ -207,14 +207,14 @@ class SheetBuilder:
                 if black_list and excel_name in black_list:
                     continue
                 excel_path = os.path.join(excel_dir, filename)
-                md5_list.update(excel_name, excel_path)
-                if is_force or md5_list.isdiff(excel_name):
+                metalist.update(excel_name, excel_path)
+                if is_force or metalist.isdiff(excel_name):
                     self._lookup_dict[excel_name] = []  # 这张表需要导出，记录具体导出了哪些sheet。
                     self._make_book(excel_name, excel_path, list_error)
                 else:
                     self._lookup_dict[excel_name] = _Fmt.NO_DIFF_FLAG  # 整张表没有变更
         sheet_nums = self._editor.edit_end(self._lookup_dict, is_force)
-        md5_list.save(VERSION)
+        metalist.save(VERSION)
         self._dump_build_logs(list_warn, list_error)
         log.i('导表结束 (数量:%d, 耗时:%.2fs)' % (sheet_nums, time.time() - start_t))
         if self._excel_errors:
@@ -394,15 +394,15 @@ class _Lua2:
 
 class _ULOEditor:
 
-    def __init__(self, forceone):
-        self._forceone = forceone
+    def __init__(self, force_one):
+        self._force_one = force_one
         self._json_type = {'nil': 0, 'string': 1, 'int': 2, 'float': 3, 'bool': 4, 'list': 5, 'dict': 6, 'long': 7}
         self._ulo_type = {'int': 1, 'string': 2, 'float': 3, 'json': 4, 'long': 5}
 
     def edit_begin(self, out_path, is_force):
         self._ulo_path = out_path
         self._new_dict = {}
-        if self._forceone:
+        if self._force_one:
             if not os.path.isfile(out_path):
                 log.d('历史导出的数据丢失，需要全部重新导出:', out_path)
                 return True
@@ -413,7 +413,7 @@ class _ULOEditor:
         return is_force
 
     def edit_end(self, build_look_map, is_force):
-        if self._forceone:
+        if self._force_one:
             return self._out_one(build_look_map, is_force)
         else:
             return self._out_pkg(build_look_map)
@@ -786,8 +786,8 @@ class _TXTEditor:
     def edit(self, sheet, sheet_area, sheet_name, excel_name, errors):
         pass
 
-# 文件MD5记录
-class FileMD5List:
+# 文件元数据记录
+class FileMetaList:
     def __init__(self, path, hide=False):
         self._path = path
         self._hide = hide
@@ -799,25 +799,26 @@ class FileMD5List:
         if not os.path.isfile(self._path):
             return
         if self._hide:
-            FS.set_file_archive(self._path)
+            FS.set_file_visible(self._path, True)
         self._old_map = json.loads(FS.read_text(self._path))
         if self._hide:
-            FS.set_file_hidden(self._path)
+            FS.set_file_visible(self._path, False)
 
     def save(self, version):
         self._new_map['version'] = version
         if self._hide:
-            FS.set_file_archive(self._path)
+            FS.set_file_visible(self._path, True)
         FS.write_text(self._path, json.dumps(self._new_map, indent=4))
         if self._hide:
-            FS.set_file_hidden(self._path)
+            FS.set_file_visible(self._path, False)
 
     def update(self, key, filepath):
-        self._new_map['manifest'][key] = FS.md5(filepath)
+        meta = os.stat(filepath)
+        self._new_map['manifest'][key] = math.floor(meta.st_mtime * 1000)  # FS.md5(filepath)
 
-    def isdiff(self, key):   # 对比MD5是否不同
+    def isdiff(self, key):  # 对比元数据是否不同
         old = self._old_map.get('manifest')
         return (not old) or old.get(key) != self._new_map['manifest'].get(key)
 
-    def get_version(self):  # 获取就记录版本号
-        return self._old_map.get('version')
+    def isupgrade(self, version):  # 是否程序已升级
+        return self._old_map.get('version') != version

@@ -2,7 +2,6 @@
 # @Time    : 2019/3/25 7:03 PM
 # @Author  : Joli
 # @Email   : 99755349@qq.com
-import json
 import os
 import re
 import time
@@ -17,7 +16,6 @@ RE_RAW_END = re.compile('\](=*?)\]\)(\s*?)$')  # "]==])\n"
 RE_SETNODE = re.compile(':setNode\((.*?)\)(\s*?)$')  # setNode()
 
 class LuaCSBuilder:
-
     def __init__(self, flag_dangling=2, flag_hidden=1, flag_repeat=0):
         self._flag_dangling = flag_dangling
         self._flag_hidden = flag_hidden
@@ -42,9 +40,11 @@ class LuaCSBuilder:
                 name = src_path[split_pos:]
                 dst_path = os.path.join(dst, name)
                 if os.path.isfile(dst_path):
-                    if not FS.fast_check_modify(src_path, dst_path, ignore_size=True):
+                    if not FS.is_meta_modified(src_path, dst_path, ignore_size=True):
                         continue  # 文件未修改
                 self._build_lua(src_path, dst_path)
+                # shutil.copystat(src_path, dst_path)
+                FS.sync_meta_utime(dst_path, src_path)
 
     def _build_lua(self, src, dst):
         log.i(src)

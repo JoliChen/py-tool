@@ -6,9 +6,7 @@ import json
 import os
 import shutil
 import zlib
-
 import requests
-
 from jonlin.utils import FS, Log, Bit
 from jonlin.cl import Shell
 
@@ -618,7 +616,7 @@ def test_json2excel():
 
 def test_hack_apk():
     from simples.rob import RobAPK
-    deapk = RobAPK.RobJYYZ()
+    deapk = RobAPK.RobQQC()
     # deapk.decompile()
     # deapk.reinstall()
     # deapk.extract_files()

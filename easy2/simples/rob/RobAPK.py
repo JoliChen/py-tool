@@ -7,9 +7,11 @@ import json
 import os
 import shutil
 import xml.etree.ElementTree as ET
+
+from PIL import Image
 from androguard.core.bytecodes import axml
 
-from com.arts import ImageTailor, ImageTools, PKMTools, UnityExtract
+from com.arts import ImageTailor, assetutil
 from jonlin.cl import APKTool, ADB
 from jonlin.utils import FS, Text, Crypto, Bit
 from simples.rob import RobCom
@@ -532,7 +534,7 @@ class RobBZDX:
             for fn in files:
                 fn = os.path.join(root, fn)
                 fd = os.path.join(dst, fn[pos:])
-                UnityExtract.unityfs(fn, fd)
+                assetutil.unityfs(fn, fd)
         # self.make_shader()
 
     def make_shader(self):
@@ -596,10 +598,11 @@ class RobZQQST(DeApkBase):  # 最强骑士团
 
     @staticmethod
     def convert_pngs(raw_root):
+        pkmtools = assetutil.PkmUtil()
         for f in FS.walk_files(raw_root, ewhites=['.pvr']):
-            PKMTools.pkm2png(f, os.path.dirname(f), transpose=False)
+            pkmtools.topng(f, os.path.dirname(f), needflip=False)
         for f in FS.walk_files(raw_root, ewhites=['.pvr@alpha']):
-            PKMTools.pkm2png(f, os.path.dirname(f), transpose=False, subfix='_alpha')
+            pkmtools.topng(f, os.path.dirname(f), needflip=False, subfix='_alpha')
 
     @staticmethod
     def convert_final(raw_root):
@@ -616,7 +619,7 @@ class RobZQQST(DeApkBase):  # 最强骑士团
             a = sub + '_alpha.png'
             if not os.path.isfile(a):
                 continue
-            image = ImageTools.merge_rgb_alpha(rgb, a)
+            image = assetutil.merge_rgba(rgb, a)
             image.save(sub + '_final.png', format='png')
 
     @staticmethod
@@ -648,17 +651,18 @@ class RobJYYZ(DeApkBase):  # 莉莉丝-剑与远征
     @staticmethod
     def decrypt_res():
         assets_dir = '/Users/joli/Downloads/Hack/jyyz/assets'
+        pkmtools = assetutil.PkmUtil()
         for fp in FS.walk_files(assets_dir, ewhites=['.pvr']):
             fd = os.path.dirname(fp)
-            rgb_path = PKMTools.pkm2png(fp, fd, transpose=False)
+            rgb_path = pkmtools.topng(fp, fd, needflip=False)
             if not rgb_path:
                 continue
             fn = FS.filename(rgb_path)
             a_path = os.path.join(fd, fn + '.pvr@alpha')
             if os.path.isfile(a_path):
-                a_path = PKMTools.pkm2png(a_path, fd, transpose=False, subfix='_alpha')
+                a_path = pkmtools.topng(a_path, fd, needflip=False, subfix='_alpha')
                 png_path = os.path.join(fd, fn + '_final.png')
-                image = ImageTools.merge_rgb_alpha(rgb_path, a_path)
+                image = assetutil.merge_rgba(rgb_path, a_path)
                 image.save(png_path)
             else:
                 png_path = rgb_path
@@ -686,23 +690,217 @@ class RobMJFY(DeApkBase):  # 萌将风云
 
     @staticmethod
     def decrypt_pkm(pkm_dir):
+        pkmtools = assetutil.PkmUtil()
         for name in os.listdir(pkm_dir):
             if not name.endswith('.pkm'):
                 continue
-            PKMTools.pkm2png(os.path.join(pkm_dir, name), pkm_dir, transpose=False)
-
+            pkmtools.topng(os.path.join(pkm_dir, name), pkm_dir, needflip=False)
             name = FS.filename(name)  # 去掉后缀
             png_img = os.path.join(pkm_dir, name + '_image.png')
             png_rgb = os.path.join(pkm_dir, name + '.png')
             if os.path.isfile(png_rgb):
                 png_a = os.path.join(pkm_dir, name + '_a.png')
                 if os.path.isfile(png_a):
-                    image = ImageTools.merge_rgb_alpha(png_rgb, png_a)
+                    image = assetutil.merge_rgba(png_rgb, png_a)
                     image.save(png_img, format='png')
                 else:
                     shutil.copyfile(png_rgb, png_img)
-
             plist = os.path.join(pkm_dir, name + '.plist')
             if os.path.isfile(png_img) and os.path.isfile(plist):
                 ImageTailor.tp(plist, png_img, fixwhite=True)
             break
+
+class RobSGZHXDL(DeApkBase):  # 三国志幻想大陆
+    def __init__(self):
+        DeApkBase.__init__(self, 'sgzhxdl')
+
+    def decrypt_res(self):
+        hash_dir = '/Users/joli/Downloads/sanguozhihuanxiangdalu_yxdown.com/assets/hash'
+        # self.check_json_files(hash_dir)
+        # self.check_paths(hash_dir)
+        # self.check_files(hash_dir)
+        # self.format_files('/Users/joli/Downloads/sanguozhihuanxiangdalu_yxdown.com/assets/hash2')
+        self.export_pkm('/Users/joli/Downloads/sanguozhihuanxiangdalu_yxdown.com/assets/hash2')
+
+    @staticmethod
+    def export_pkm(root_dir):
+        pkmtools = assetutil.PkmUtil()
+        for fn in os.listdir(root_dir):
+            if fn.endswith('.pkm') or fn.endswith('.pkm20'):
+                pkmtools.topng(os.path.join(root_dir, fn), root_dir, needflip=False)
+
+    @staticmethod
+    def format_files(root_dir):
+        import demjson
+        luaq = bytes([0x1B, 0x4C, 0x75, 0x61, 0x51])
+        csbv = bytes([0x32, 0x2E, 0x31, 0x2E, 0x30, 0x2E, 0x30])
+        skelv = bytes([0x33, 0x2E, 0x36, 0x2E, 0x35, 0x32])
+        plist = b'<?xml'
+        plist_bom = bytes([0xEF, 0xBB, 0xBF]) + plist
+        fnt = bytes([0x69, 0x6E, 0x66, 0x6F, 0x20])
+        pkm10 = bytes([0x50, 0x4B, 0x4D, 0x20, 0x31, 0x30])
+        pkm20 = bytes([0x50, 0x4B, 0x4D, 0x20, 0x32, 0x30])
+        oo2 = bytes([0x0, 0x0, 0x2])
+        files = os.listdir(root_dir)
+        for fn in files:
+            if '.' in fn:
+                continue
+            fn = os.path.join(root_dir, fn)
+            with open(fn, 'rb') as fs:
+                head = fs.read(8)
+                fs.seek(0)
+                if head[:2] == RobCom.JPG_BEG:
+                    p = fs.tell()
+                    fs.seek(os.stat(fn).st_size-2)
+                    b = fs.read(2)
+                    if b == RobCom.JPG_END:
+                        os.rename(fn, os.path.join(root_dir, fn + '.jpg'))
+                        fs.seek(p)
+                        continue
+                    fs.seek(p)
+                elif head == RobCom.PNG_BEG:
+                    os.rename(fn, os.path.join(root_dir, fn + '.png'))
+                    continue
+                elif head[:5] == luaq:
+                    os.rename(fn, os.path.join(root_dir, fn + '.luac'))
+                    continue
+                elif head[:5] == plist or head == plist_bom:
+                    os.rename(fn, os.path.join(root_dir, fn + '.plist'))
+                    continue
+                elif head[:5] == fnt:
+                    os.rename(fn, os.path.join(root_dir, fn + '.fnt'))
+                    continue
+                elif head[:6] == pkm10:
+                    os.rename(fn, os.path.join(root_dir, fn + '.pkm'))
+                    continue
+                elif head[:6] == pkm20:
+                    os.rename(fn, os.path.join(root_dir, fn + '.pkm20'))
+                    continue
+                elif head[:3] == oo2:
+                    os.rename(fn, os.path.join(root_dir, fn + '.oo2'))
+                    continue
+                elif head[0] == 0x0A:
+                    os.rename(fn, os.path.join(root_dir, fn + '.script'))
+                    continue
+                elif head[0] == 0x14:
+                    p = fs.tell()
+                    fs.seek(52)
+                    b = fs.read(7)
+                    if b == csbv:
+                        os.rename(fn, os.path.join(root_dir, fn + '.csb'))
+                        fs.seek(p)
+                        continue
+                    fs.seek(p)
+                elif head[0] == 0x1C:
+                    p = fs.tell()
+                    fs.seek(29)
+                    b = fs.read(6)
+                    if b == skelv:
+                        os.rename(fn, os.path.join(root_dir, fn + '.skel'))
+                        fs.seek(p)
+                        continue
+                    fs.seek(p)
+                elif head[:1] == b'\n':
+                    line = fs.readlines(2)
+                    if line[0] == b'\n':
+                        if len(line) > 1 and line[1].endswith(b'.png\n'):
+                            os.rename(fn, os.path.join(root_dir, fn + '.atlas'))
+                            continue
+                elif head[:1] == b'{' or head[:1] == b'[':
+                    try:
+                        demjson.decode_file(fn)
+                        os.rename(fn, os.path.join(root_dir, fn + '.json'))
+                        continue
+                    except:
+                        pass
+                print('unknow', fn)
+        print('done')
+
+    @staticmethod
+    def check_files(root_dir):
+        path = os.path.join(root_dir, '2/8/691b7f51a2a042ae60bbc467eedf8882')
+        text = FS.read_text(path)
+        confs = text.split('@')
+        confs.pop(0)
+        # print('\n'.join(confs))
+        print(len(confs))
+
+        # files = FS.walk_files(root_dir, cut=len(root_dir)+1)
+        # print(len(files))
+        # for fn in confs:
+        #     if fn not in files:
+        #         print("not in files", fn)
+        # for fn in files:
+        #     if fn not in confs:
+        #         print("not in confs", fn)
+
+        hash2_dir = os.path.join(os.path.dirname(root_dir), "hash2")
+        if os.path.isdir(hash2_dir):
+            shutil.rmtree(hash2_dir)
+        os.makedirs(hash2_dir)
+        for i in range(len(confs)):
+            shutil.copyfile(os.path.join(root_dir, confs[i]), os.path.join(hash2_dir, str(i+1)))
+        print('done')
+
+    @staticmethod
+    def check_paths(root_dir):
+        # exts = (b'png', b'jpg', b'json', b'ccb', b'plist', b'fnt', b'atlas', b'skel', b'luac')
+        exts = (b'jpg', b'json', b'ccb', b'plist', b'fnt', b'atlas', b'skel', b'luac')
+        conf_list = []
+
+        for (par, _, files) in os.walk(root_dir):
+            for fn in files:
+                path = os.path.join(par, fn)
+                with open(path, 'rb') as fs:
+                    array = RobCom.find_binary_paths(fs.read(), exts)
+                    if array:
+                        print(path)
+                        conf_list.append({'path': path, 'list': array})
+        print('-----------------------------------------------')
+        conf_list.sort(key=lambda x: len(x['list']), reverse=True)
+        log_file = os.path.join(os.path.dirname(root_dir), "config.log")
+        if os.path.isfile(log_file):
+            os.remove(log_file)
+        with open(log_file, 'a') as fs:
+            for i in range(len(conf_list)):
+                item = conf_list[i]
+                print(i, item['path'], item['list'], file=fs)
+        print('done')
+
+    @staticmethod
+    def check_json_files(root_dir):
+        import demjson
+        json_list = []
+        for (par, _, files) in os.walk(root_dir):
+            for fn in files:
+                path = os.path.join(par, fn)
+                # print(path)
+                try:
+                    demjson.decode_file(path)
+                    json_list.append({'path': path, 'stat': os.stat(path)})
+                except:
+                    pass
+        print('-----------------------------------------------')
+        json_list.sort(key=lambda x: x['stat'].st_size, reverse=True)
+        for i in range(len(json_list)):
+            item = json_list[i]
+            print(i, item['path'], item['stat'].st_size)
+        print('done')
+
+class RobQQC(DeApkBase):  # 千秋辞
+    def __init__(self):
+        DeApkBase.__init__(self, 'qqc')
+
+    @staticmethod
+    def decrypt_res():
+        # root = '/Users/joli/Downloads/Unity/hack/apk/qqc'
+        # root = '/Users/joli/Downloads/Unity/hack/apk/xyjzjzy'
+        # assetutil.sh_unityfs(os.path.join(root, 'assets'), os.path.join(root, 'output'), os.path.join(root, 'temp'))
+        root = '/Users/joli/Desktop/xyjzjzy/textures$ui_android$chance'
+        rgbpath = os.path.join(root, 'UI_chance.png')
+        alphapath = os.path.join(root, 'UI_chance_alpha_1.png')
+        image = assetutil.merge_rgba(rgbpath, alphapath, alphaindex=0)
+        image.save(os.path.join(root, 'test.png'))
+
+        # r = Image.open(alphapath).split()[0]
+        # r.save(os.path.join(root, 'UI_chance_alpha_1.png'))

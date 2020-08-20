@@ -65,6 +65,16 @@ class CmdMake:
         cs = LuaCSBuilder()
         cs.build(src=os.path.join(self.root, 'csui/src'), dst=os.path.join(self.root, 'csui/dst'))
 
+    @staticmethod
+    def make_csd():
+        from com.dev import MakeCSD
+        MakeCSD.main()
+
+    @staticmethod
+    def make_ccs():
+        from com.dev import MakeCCS
+        MakeCCS.main()
+
     def make_lua(self):
         from com.dev.MakeScript import LuacBuilder
         lb = LuacBuilder()

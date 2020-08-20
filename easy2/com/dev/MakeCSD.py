@@ -20,7 +20,7 @@ class MakeCSD:
     def __init__(self):
         pass
 
-    # 修改画布中字体的描边
+    # 修改画布中文本的描边
     def modify_dom_outline(self, csd_file, *tasks):
         csd_dom, changed = xml.dom.minidom.parse(csd_file), False
         for node in csd_dom.getElementsByTagName(kXmlNode):
@@ -31,35 +31,86 @@ class MakeCSD:
                 for t in tasks:
                     if not self.is_equal_color(t['old'], color):
                         continue
-                    # node.
-                    if t['new'] == 'CLOSE':
+                    new_color = t['new']
+                    if new_color == 'CLOSE':
                         if node.getAttribute('OutlineEnabled') == 'True':
                             # node.removeNamedItem('OutlineEnabled')
                             del node._attrs['OutlineEnabled']
                             changed = True
+                    else:
+                        self.set_outline(node, new_color)
+                        changed = True
+        return csd_dom.toxml(encoding='utf-8') if changed else None
+
+    # 修改画布中文本的颜色
+    def modify_dom_textcolor(self, csd_file, *tasks):
+        csd_dom, changed = xml.dom.minidom.parse(csd_file), False
+        for node in csd_dom.getElementsByTagName(kXmlNode):
+            if kTypeText == node.getAttribute('ctype'):
+                color = self.get_color(node)
+                if not color:
+                    continue
+                for t in tasks:
+                    if not self.is_equal_color(t['old'], color):
+                        continue
+                    new_color = t['new']
+                    self.set_color(node, new_color)
+                    changed = True
         return csd_dom.toxml(encoding='utf-8') if changed else None
 
     # 修改画布中的字体
-    def modify_dom_font(self, csd_file, font_name):
+    def modify_dom_font(self, csd_file, font_name, user_ctypes):
         csd_dom, changed = xml.dom.minidom.parse(csd_file), False
         for node in csd_dom.getElementsByTagName(kXmlNode):
-            if kTypeButton == node.getAttribute('ctype'):
-                lable = node.getAttribute('ButtonText')
-                if lable and not lable.isspace():
-                    if font_name:
-                        if self.set_font(csd_dom, node, font_name):
-                            changed = True
-                    else:
-                        self.remove_font(node)
-                        changed = True
-            elif kTypeText == node.getAttribute('ctype'):
-                if font_name:
-                    if self.set_font(csd_dom, node, font_name):
-                        changed = True
-                else:
-                    self.remove_font(node)
-                    changed = True
+            if user_ctypes and node.getAttribute('ctype') not in user_ctypes:
+                continue
+            changed |= self.modify_dom_font0(csd_dom, node, font_name)
         return csd_dom.toxml(encoding='utf-8') if changed else None
+
+    def modify_dom_font0(self, csd_dom, node, font_name):
+        changed = False
+        for e in node.getElementsByTagName(kXmlNode):
+            if kTypeText == e.getAttribute('ctype'):
+                if not font_name:
+                    changed |= self.remove_font(e)
+                else:
+                    changed |= self.set_font(csd_dom, e, font_name)
+        if not font_name:
+            changed |= self.remove_font(node)
+        else:
+            if kTypeButton == node.getAttribute('ctype'):
+                title = node.getAttribute('ButtonText')
+                if not title or title.isspace():
+                    return changed  # 纯图片的按钮就不需要添加字体了
+            changed |= self.set_font(csd_dom, node, font_name)
+        return changed
+
+    # 修改画布中的字体大小
+    def modify_dom_fontsize(self, csd_file, *tasks):
+        csd_dom, changed = xml.dom.minidom.parse(csd_file), False
+        for node in csd_dom.getElementsByTagName(kXmlNode):
+            for t in tasks:
+                user_ctypes = t['user_ctypes']
+                if user_ctypes and node.getAttribute('ctype') not in user_ctypes:
+                    continue
+                changed |= self.modify_dom_fontsize0(node, t)
+        return csd_dom.toxml(encoding='utf-8') if changed else None
+
+    def modify_dom_fontsize0(self, node, task):
+        changed = False
+        user_fonts = task['user_fonts']
+        for e in node.getElementsByTagName(kXmlNode):
+            if kTypeText == e.getAttribute('ctype'):
+                if user_fonts and self.get_font(e) not in user_fonts:
+                    continue
+                if e.getAttribute('FontSize') == task['old']:
+                    e.setAttribute('FontSize', task['new'])
+                    changed = True
+        if not user_fonts or self.get_font(node) in user_fonts:
+            if node.getAttribute('FontSize') == task['old']:
+                node.setAttribute('FontSize', task['new'])
+                changed = True
+        return changed
 
     # 修改画布中所有的按钮皮肤
     def modify_dom_btn_skin(self, csd_file, *tasks):
@@ -108,7 +159,7 @@ class MakeCSD:
                         self.set_plist_prop(prop, skin['plist'])
         if children:
             for child in children:
-                if child.getAttribute('ctype') == 'TextObjectData':
+                if child.getAttribute('ctype') == kTypeText:
                     if title_color:
                         self.set_color(child, title_color)
                     if title_outline:
@@ -308,12 +359,24 @@ class MakeCSD:
                 self.set_prop_color(prop, color)
                 break
 
+    @staticmethod
+    def get_color(node):
+        for prop in node.childNodes:
+            if prop.nodeName == 'CColor':
+                return {
+                    'a': int(prop.getAttribute('A')),
+                    'r': int(prop.getAttribute('R')),
+                    'g': int(prop.getAttribute('G')),
+                    'b': int(prop.getAttribute('B')),
+                }
+
     # 设置描边
     def set_outline(self, node, color):
         for prop in node.childNodes:
             if prop.nodeName == 'OutlineColor':
                 self.set_prop_color(prop, color)
                 break
+
     # 获取描边
     @staticmethod
     def get_outline(node):
@@ -396,6 +459,12 @@ class MakeCSD:
                 return float(x) if x else 0, float(y) if y else 0
 
     @staticmethod
+    def get_font(node):
+        for p in node.childNodes:
+            if p.nodeName == kPropFont:
+                return p.getAttribute('Path')
+
+    @staticmethod
     def set_font(dom, node, font_name):
         prop, changed = None, False
         for p in node.childNodes:
@@ -423,7 +492,8 @@ class MakeCSD:
         for prop in node.childNodes:
             if prop.nodeName == kPropFont:
                 node.childNodes.remove(prop)
-                break
+                return True
+        return False
 
     # 设置plist
     @staticmethod
@@ -570,7 +640,8 @@ def simple_modify_font(csd_dir):
                 continue
             f = os.path.join(par, name)
             print(f)
-            buffer = maker.modify_dom_font(f, 'font/AdobeHeit.ttf')
+            # buffer = maker.modify_dom_font(f, 'font/AdobeHeit.ttf')
+            buffer = maker.modify_dom_font(f, 'font/fzwb.ttf', [kTypeButton])
             if not buffer:
                 continue
             with open(f, 'wb') as fp:
@@ -585,9 +656,62 @@ def simple_modify_outline(csd_dir):
             f = os.path.join(par, name)
             # f = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb/Login/fenbao.csd'
             print(f)
+            # buffer = maker.modify_dom_outline(f, *[{
+            #     'old': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
+            #     'new': 'CLOSE'
+            # }])
             buffer = maker.modify_dom_outline(f, *[{
-                'old': {'a': 255, 'r': 136, 'g': 76, 'b': 16},
-                'new': 'CLOSE'
+                'old': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
+                'new': {'a': 255, 'r': 49, 'g': 113, 'b': 131},
+                'user_ctype': kTypeButton
+            }, {
+                'old': {'a': 255, 'r': 97, 'g': 59, 'b': 32},
+                'new': {'a': 255, 'r': 138, 'g': 97, 'b': 38},
+                'user_ctype': kTypeButton
+            }])
+            if not buffer:
+                continue
+            with open(f, 'wb') as fp:
+                fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
+
+def simple_modify_textcolor(csd_dir):
+    maker = MakeCSD()
+    for (par, _, files) in os.walk(csd_dir):
+        for name in files:
+            if not name.endswith('.csd'):
+                continue
+            f = os.path.join(par, name)
+            # f = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb/Login/fenbao.csd'
+            print(f)
+            buffer = maker.modify_dom_textcolor(f, *[{
+                'old': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
+                'new': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+                'user_ctype': kTypeButton
+            }])
+            if not buffer:
+                continue
+            with open(f, 'wb') as fp:
+                fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
+
+def simple_modify_fontsize(csd_dir):
+    maker = MakeCSD()
+    for (par, _, files) in os.walk(csd_dir):
+        for name in files:
+            if not name.endswith('.csd'):
+                continue
+            f = os.path.join(par, name)
+            # f = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb/Login/fenbao.csd'
+            print(f)
+            buffer = maker.modify_dom_fontsize(f, *[{
+                'old': "24",
+                'new': "28",
+                'user_ctypes': [kTypeButton],
+                'user_fonts': ['font/fzwb.ttf']
+            }, {
+                'old': "26",
+                'new': "28",
+                'user_ctypes': [kTypeButton],
+                'user_fonts': ['font/fzwb.ttf']
             }])
             if not buffer:
                 continue
@@ -598,7 +722,10 @@ def main():
     csd_dir = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb'
     # simple_modify_button(csd_dir)
     # simple_modify_font(csd_dir)
-    simple_modify_outline(csd_dir)
+    # simple_modify_outline(csd_dir)
+    # simple_modify_textcolor(csd_dir)
+    simple_modify_fontsize(csd_dir)
+    print("done")
 
 if __name__ == '__main__':
     main()

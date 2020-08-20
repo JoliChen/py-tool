@@ -3,7 +3,7 @@
 # @Author  : Joli
 # @Email   : 99755349@qq.com
 # File System
-
+import math
 import os
 import shutil
 import hashlib
@@ -108,45 +108,40 @@ def merge_tree(srcdir, dstdir, copy_file_func=shutil.copy2):
 def fast_merge_tree(srcdir, dstdir):
     merge_tree(srcdir, dstdir, fast_replace)
 
-# 通过文件的元数据检查文件是否修改
-def fast_check_modify(src, dst, ignore_size=False):
-    src_meta = os.stat(src)
-    dst_meta = os.stat(dst)
-    if not ignore_size:
-        if src_meta.st_size != dst_meta.st_size:
-            return True  # 文件大小不一致
-    if round(src_meta.st_mtime, 3) != round(dst_meta.st_mtime, 3):
+# 快速替换文件 (检查文件元信息是否变更)
+def fast_replace(src, dst):
+    if os.path.isfile(dst) and not is_meta_modified(src, dst):
+        return  # 文件未修改则忽略本次拷贝
+    log.d('fast_copy:', src, dst)
+    shutil.copy2(src, dst)  # copy file and stat
+
+# 同步文件元数据的访问时间和修改时间
+def sync_meta_utime(src, dst):
+    meta = os.stat(src)
+    os.utime(dst, (meta.st_ctime, meta.st_mtime))
+
+# 通过文件元数据检查文件是否修改
+def is_meta_modified(src, dst, ignore_size=False):
+    st1 = os.stat(src)
+    st2 = os.stat(dst)
+    if not ignore_size and st1.st_size != st2.st_size:
+        return True  # 文件大小不一致
+    if math.floor(st1.st_mtime * 1000) != math.floor(st2.st_mtime * 1000):
         return True  # 文件修改时间不一致（精确到秒）
     return False  # 文件未修改
 
-# 快速替换文件 (检查文件元信息是否变更)
-def fast_replace(src, dst):
-    if os.path.isfile(dst) and not fast_check_modify(src, dst):
-        return  # 文件未修改则忽略本次拷贝
-    log.d('fast_copy:', src, dst)
-    shutil.copy2(src, dst)
-
-# 设置文件隐藏
-def set_file_hidden(fp):
+# 设置文件显示/隐藏
+def set_file_visible(fp, visible):
     if not os.path.isfile(fp):
         return
     if Cross.IS_WINDOWS:
         try:
             import win32api
             import win32con
-            win32api.SetFileAttributes(fp, win32con.FILE_ATTRIBUTE_HIDDEN)
-        except ImportError:
-            pass
-
-# 设置文件显示
-def set_file_archive(fp):
-    if not os.path.isfile(fp):
-        return
-    if Cross.IS_WINDOWS:
-        try:
-            import win32api
-            import win32con
-            win32api.SetFileAttributes(fp, win32con.FILE_ATTRIBUTE_ARCHIVE)
+            if visible:
+                win32api.SetFileAttributes(fp, win32con.FILE_ATTRIBUTE_ARCHIVE)
+            else:
+                win32api.SetFileAttributes(fp, win32con.FILE_ATTRIBUTE_HIDDEN)
         except ImportError:
             pass
 
@@ -208,7 +203,7 @@ class FileStatManifest:
 
     @staticmethod
     def _mtime(stat):
-        return int(round(stat.st_mtime, 3) * 1000)  # 文件修改时间精确到毫秒
+        return math.floor(stat.st_mtime * 1000)  # 文件修改时间精确到毫秒
 
     def ismodified(self, filepath):
         stat = os.stat(filepath)
