@@ -2,6 +2,7 @@
 # @Time    : 2019/3/25 7:03 PM
 # @Author  : Joli
 # @Email   : 99755349@qq.com
+import math
 import os
 import re
 import time
@@ -37,14 +38,16 @@ class LuaCSBuilder:
                 if not name.endswith('.lua'):
                     continue
                 src_path = os.path.join(root, name)
+                src_meta = os.stat(src_path)
                 name = src_path[split_pos:]
                 dst_path = os.path.join(dst, name)
                 if os.path.isfile(dst_path):
-                    if not FS.is_meta_modified(src_path, dst_path, ignore_size=True):
+                    dst_meta = os.stat(dst_path)
+                    if math.floor(src_meta.st_mtime * 1000) != math.floor(dst_meta.st_mtime * 1000):
                         continue  # 文件未修改
                 self._build_lua(src_path, dst_path)
                 # shutil.copystat(src_path, dst_path)
-                FS.sync_meta_utime(dst_path, src_path)
+                os.utime(dst_path, (src_meta.st_ctime, src_meta.st_mtime))
 
     def _build_lua(self, src, dst):
         log.i(src)

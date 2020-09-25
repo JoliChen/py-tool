@@ -683,11 +683,18 @@ def simple_modify_textcolor(csd_dir):
             f = os.path.join(par, name)
             # f = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb/Login/fenbao.csd'
             print(f)
-            buffer = maker.modify_dom_textcolor(f, *[{
-                'old': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
-                'new': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
-                'user_ctype': kTypeButton
-            }])
+            buffer = maker.modify_dom_textcolor(f, *[
+                # {
+                #     'old': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
+                #     'new': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+                #     'user_ctype': kTypeButton
+                # }
+                {
+                    # 'old': {'a': 255, 'r': 109, 'g': 45, 'b': 6},
+                    'old': {'a': 255, 'r': 74, 'g': 76, 'b': 7},
+                    'new': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
+                }
+            ])
             if not buffer:
                 continue
             with open(f, 'wb') as fp:
@@ -723,8 +730,8 @@ def main():
     # simple_modify_button(csd_dir)
     # simple_modify_font(csd_dir)
     # simple_modify_outline(csd_dir)
-    # simple_modify_textcolor(csd_dir)
-    simple_modify_fontsize(csd_dir)
+    simple_modify_textcolor(csd_dir)
+    # simple_modify_fontsize(csd_dir)
     print("done")
 
 if __name__ == '__main__':

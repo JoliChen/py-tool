@@ -1,0 +1,67 @@
+# -*- coding: utf-8 -*-
+# @Time    : 2020/8/14 6:45 PM
+# @Author  : Joli
+# @Email   : 99755349@qq.com
+
+"""
+Major：具有相同名称但不同主版本号的程序集不可互换。
+例如，这适用于对产品的大量重写，这些重写使得无法实现向后兼容性。
+
+Minor：如果两个程序集的名称和主版本号相同，而次版本号不同，这指示显著增强，但照顾到了向后兼容性。
+例如，这适用于产品的修正版或完全向后兼容的新版本。
+"""
+
+class Ver:
+    kMAJOR, kMINOR = 0, 1  # 主版本、子版本
+
+    def __init__(self, majornumber=0, minornumber=0):
+        self._content = [majornumber, minornumber]
+
+    @property
+    def major(self):
+        return self._content[self.kMAJOR]
+
+    @major.setter
+    def major(self, n):
+        self._content[self.kMAJOR] = n
+
+    @property
+    def minor(self):
+        return self._content[self.kMINOR]
+
+    @minor.setter
+    def minor(self, n):
+        self._content[self.kMINOR] = n
+
+    @property
+    def content(self):
+        return tuple(self._content)
+
+    def equal(self, other):
+        other_content = self.validate_compare_content(other)
+        for i in range(len(self._content)):
+            if self._content[i] != other_content[i]:
+                return False
+        return True
+
+    def below(self, other):
+        other_content = self.validate_compare_content(other)
+        for i in range(len(self._content)):
+            if self._content[i] < other_content[i]:
+                return True
+        return False
+
+    def above(self, other):
+        other_content = self.validate_compare_content(other)
+        for i in range(len(self._content)):
+            if self._content[i] > other_content[i]:
+                return True
+        return False
+
+    @staticmethod
+    def validate_compare_content(other):
+        if isinstance(other, Ver):
+            return other.content
+        if isinstance(other, tuple) or isinstance(other, list):
+            return other
+        raise TypeError('unsupport version compare target' + other)

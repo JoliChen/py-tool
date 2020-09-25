@@ -146,6 +146,7 @@ def spine(atlaspath, imagepath=None, outputdir=None, fixwhite=True):
         atlas_dir = os.path.dirname(atlaspath)
         if imagepath is None:
             imagepath = os.path.join(atlas_dir, image_name)
+            # imagepath = os.path.join(atlas_dir, image_name[:-4] + '_final.png')
         if not os.path.isfile(imagepath):
             continue
         if outputdir is None:

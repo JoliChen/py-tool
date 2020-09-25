@@ -44,11 +44,11 @@ def u16_from(b, endian=LITTLE_ENDIAN):
     return b[0] + (b[1] << 8) if endian == LITTLE_ENDIAN else b[1] + (b[0] << 8)
 
 # 将字节数组转成16进制字符格式
-def bytes2hex(buffer):
-    s = ''
-    for p in range(len(buffer)):
-        s += '0x%x,' % buffer[p]
-    return s
+def bytes2hex(buf):
+    array = []
+    for i in range(len(buf)):
+        array.append('0x%x' % buf[i])
+    return array
 
 # 基于bit(0/1)的标志位存储器
 class MaskFlag:

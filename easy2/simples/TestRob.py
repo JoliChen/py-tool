@@ -616,7 +616,7 @@ def test_json2excel():
 
 def test_hack_apk():
     from simples.rob import RobAPK
-    deapk = RobAPK.RobQQC()
+    deapk = RobAPK.RobJYYZ()
     # deapk.decompile()
     # deapk.reinstall()
     # deapk.extract_files()

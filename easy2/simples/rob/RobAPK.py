@@ -650,25 +650,33 @@ class RobJYYZ(DeApkBase):  # 莉莉丝-剑与远征
 
     @staticmethod
     def decrypt_res():
-        assets_dir = '/Users/joli/Downloads/Hack/jyyz/assets'
-        pkmtools = assetutil.PkmUtil()
-        for fp in FS.walk_files(assets_dir, ewhites=['.pvr']):
-            fd = os.path.dirname(fp)
-            rgb_path = pkmtools.topng(fp, fd, needflip=False)
-            if not rgb_path:
-                continue
-            fn = FS.filename(rgb_path)
-            a_path = os.path.join(fd, fn + '.pvr@alpha')
-            if os.path.isfile(a_path):
-                a_path = pkmtools.topng(a_path, fd, needflip=False, subfix='_alpha')
-                png_path = os.path.join(fd, fn + '_final.png')
-                image = assetutil.merge_rgba(rgb_path, a_path)
-                image.save(png_path)
-            else:
-                png_path = rgb_path
-            plist_path = os.path.join(fd, fn + '.plist')
-            if os.path.isfile(plist_path):
-                ImageTailor.tp(plist_path, png_path, fixwhite=False)
+        # assets_dir = '/Users/joli/Downloads/Hack/jyyz/assets'
+        assets_dir = '/Users/joli/Downloads/hero'
+        # pkmtools = assetutil.PkmUtil()
+        # for fp in FS.walk_files(assets_dir, ewhites=['.plist']):
+        #     fd = os.path.dirname(fp)
+        #     # rgb_path = pkmtools.topng(fp, fd, needflip=False)
+        #     # if not rgb_path:
+        #     #     continue
+        #     fn = FS.filename(fp)
+        #     # a_path = os.path.join(fd, fn + '.pvr@alpha')
+        #     # if os.path.isfile(a_path):
+        #     #     a_path = pkmtools.topng(a_path, fd, needflip=False, subfix='_alpha')
+        #     #     png_path = os.path.join(fd, fn + '_final.png')
+        #     #     image = assetutil.merge_rgba(rgb_path, a_path)
+        #     #     image.save(png_path)
+        #     # else:
+        #     #     png_path = rgb_path
+        #     # plist_path = os.path.join(fd, fn + '.plist')
+        #     png_path = os.path.join(fd, fn + '._final.png')
+        #     if not os.path.isfile(png_path):
+        #         png_path = os.path.join(fd, fn + '.png')
+        #     if os.path.isfile(png_path):
+        #         ImageTailor.tp(fp, png_path, fixwhite=False)
+        #     else:
+        #         print('can not found png', png_path)
+        for fp in FS.walk_files(assets_dir, ewhites=['.atlas']):
+            ImageTailor.spine(fp)
 
     @staticmethod
     def extract_files():
@@ -904,3 +912,15 @@ class RobQQC(DeApkBase):  # 千秋辞
 
         # r = Image.open(alphapath).split()[0]
         # r.save(os.path.join(root, 'UI_chance_alpha_1.png'))
+
+class RobXXZYD(DeApkBase):  # 修仙在云端
+    def __init__(self):
+        DeApkBase.__init__(self, 'xxzyd')
+
+    @staticmethod
+    def decrypt_res():
+        root = '/Users/joli/Priv/android/apktool/xiuxianzaiyunduan'
+        srcdir = os.path.join(root, 'assets')
+        dstdir = os.path.join(root, 'assets_dst')
+        tmpdir = os.path.join(root, 'assets_tmp')
+        assetutil.sh_unityfs(srcdir, dstdir, tmpdir)

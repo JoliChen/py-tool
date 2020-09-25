@@ -19,8 +19,12 @@ def encode_shader(shader):
         if (i + 1) % 32 == 0:
             hexes += '\n'
     encrypt_size = len(array)
-
-    hexes = Bit.bytes2hex(encrypt_keys) + Bit.bytes2hex(Bit.u32_bytes(shader_hash)) + Bit.bytes2hex(Bit.u32_bytes(encrypt_size)) + '\n' + hexes[0:-1]
+    heads = '%s,%s,%s\n' % (
+        ','.join(Bit.bytes2hex(encrypt_keys)),
+        ','.join(Bit.bytes2hex(Bit.u32_bytes(shader_hash))),
+        ','.join(Bit.bytes2hex(Bit.u32_bytes(encrypt_size)))
+    )
+    hexes = heads + hexes[0:-1]
     encrypt_size += 14  # magic + hash + length
     print(('[%d]={\n' % encrypt_size) + hexes + '\n};')
     print('-------------------------------------------')
