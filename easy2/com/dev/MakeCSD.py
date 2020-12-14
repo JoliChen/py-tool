@@ -54,7 +54,11 @@ class MakeCSD:
                     if not self.is_equal_color(t['old'], color):
                         continue
                     new_color = t['new']
-                    self.set_color(node, new_color)
+                    if new_color:
+                        self.set_color(node, new_color)
+                    outline = t['outline']
+                    if outline:
+                        self.set_outline(node, outline)
                     changed = True
         return csd_dom.toxml(encoding='utf-8') if changed else None
 
@@ -641,7 +645,7 @@ def simple_modify_font(csd_dir):
             f = os.path.join(par, name)
             print(f)
             # buffer = maker.modify_dom_font(f, 'font/AdobeHeit.ttf')
-            buffer = maker.modify_dom_font(f, 'font/fzwb.ttf', [kTypeButton])
+            buffer = maker.modify_dom_font(f, 'font/fzwb.ttf')
             if not buffer:
                 continue
             with open(f, 'wb') as fp:
@@ -681,7 +685,7 @@ def simple_modify_textcolor(csd_dir):
             if not name.endswith('.csd'):
                 continue
             f = os.path.join(par, name)
-            # f = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb/Login/fenbao.csd'
+            # f = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb/Login/fenbao.csd'
             print(f)
             buffer = maker.modify_dom_textcolor(f, *[
                 # {
@@ -691,8 +695,9 @@ def simple_modify_textcolor(csd_dir):
                 # }
                 {
                     # 'old': {'a': 255, 'r': 109, 'g': 45, 'b': 6},
-                    'old': {'a': 255, 'r': 74, 'g': 76, 'b': 7},
-                    'new': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
+                    'old': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
+                    'new': {'a': 255, 'r': 228, 'g': 228, 'b': 231},
+                    'outline': {'a': 255, 'r': 50, 'g': 60, 'b': 87}
                 }
             ])
             if not buffer:
@@ -726,11 +731,11 @@ def simple_modify_fontsize(csd_dir):
                 fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
 
 def main():
-    csd_dir = '/Users/joli/Work/LightPro/Client/CocosProject/cocosstudio/csb'
+    csd_dir = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb'
     # simple_modify_button(csd_dir)
-    # simple_modify_font(csd_dir)
+    simple_modify_font(csd_dir)
     # simple_modify_outline(csd_dir)
-    simple_modify_textcolor(csd_dir)
+    # simple_modify_textcolor(csd_dir)
     # simple_modify_fontsize(csd_dir)
     print("done")
 

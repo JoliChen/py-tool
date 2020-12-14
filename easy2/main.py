@@ -100,6 +100,11 @@ class CmdMake:
         from com.dev import MakeAsset
         MakeAsset.main()
 
+    @staticmethod
+    def make_spine():
+        from com.dev import MakeSpine
+        MakeSpine.main()
+
 def main():
     # 添加工程搜索路径
     sys.path.append(os.path.abspath(os.path.dirname(__file__)))

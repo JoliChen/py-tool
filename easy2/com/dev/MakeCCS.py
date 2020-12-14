@@ -11,30 +11,7 @@ import shutil
 import math
 import time
 import zipfile
-
-def split_filename(filepath):
-    return filepath[filepath.rfind(os.sep)+1: filepath.rfind('.')]
-
-def make_parentdir(filepath):
-    pardir = os.path.dirname(filepath)
-    if not os.path.isdir(pardir):
-        os.makedirs(pardir)
-
-def safe_copyfile(src, dst):
-    make_parentdir(dst)
-    shutil.copyfile(src, dst)
-
-def is_meta_modified(src, dst):
-    st1 = os.stat(src)
-    st2 = os.stat(dst)
-    if st1.st_size != st2.st_size:
-        return True
-    mt1 = math.floor(st1.st_mtime * 1000)
-    mt2 = math.floor(st2.st_mtime * 1000)
-    return mt1 != mt2
-
-def normposix(path):
-    return '/'.join(path.split('\\'))
+import xxtea
 
 class Log:
     @staticmethod
@@ -45,7 +22,56 @@ class Log:
     def e(*args):
         print(*args)
 
-class BinaryKit:
+class FileKit:
+    @staticmethod
+    def normposix(path):
+        return '/'.join(path.split('\\'))
+
+    @staticmethod
+    def get_filename(filepath):
+        return filepath[filepath.rfind(os.sep) + 1: filepath.rfind('.')]
+
+    @staticmethod
+    def get_filemd5(filepath):
+        with open(filepath, 'rb') as fp:
+            h = hashlib.md5()
+            h.update(fp.read())
+            return h.hexdigest()
+
+    @staticmethod
+    def make_parentdir(filepath):
+        pardir = os.path.dirname(filepath)
+        if not os.path.isdir(pardir):
+            os.makedirs(pardir)
+
+    @staticmethod
+    def safe_copyfile(src, dst):
+        FileKit.make_parentdir(dst)
+        shutil.copyfile(src, dst)
+
+    @staticmethod
+    def is_meta_modified(src, dst):
+        st1 = os.stat(src)
+        st2 = os.stat(dst)
+        if st1.st_size != st2.st_size:
+            return True
+        mt1 = math.floor(st1.st_mtime * 1000)
+        mt2 = math.floor(st2.st_mtime * 1000)
+        return mt1 != mt2
+
+    @staticmethod
+    def compare_dir(srcdir, dstdir):
+        fid_slice = len(srcdir) + 1
+        for root, _, files in os.walk(srcdir):
+            for fn in files:
+                src = os.path.join(root, fn)
+                fid = src[fid_slice:]
+                # print(fid)
+                dst = os.path.join(dstdir, fid)
+                if not os.path.isfile(dst):
+                    print("miss", fid)
+
+class BinKit:
     @staticmethod
     def bytes2xor(buf, key):  # 异或处理二进制数据
         klen = len(key)
@@ -59,11 +85,18 @@ class BinaryKit:
             array.append('0x%x' % buf[i])
         return array
 
-    @classmethod
-    def xorhex(cls, src, key):
-        dst = cls.bytes2hex(cls.bytes2xor(src, key))
+    @staticmethod
+    def xorhex(src, key):
+        dst = BinKit.bytes2hex(BinKit.bytes2xor(src, key))
         print('xorhex src:%s len:%d' % (src, len(dst)))
         return ','.join(dst)
+
+    @staticmethod
+    def hash_bkdr(text, seed=131):  # BKDRHash [31 131 1313 13131 131313]
+        h = 0
+        for s in text:
+            h = h * seed + ord(s)
+        return h & 0xFFFFFFFF
 
 class SvnClient:
     def __init__(self, commandline='svn'):
@@ -81,7 +114,6 @@ class SvnClient:
                 return int(sversion[0])
 
 class BVM:  # Bundle Version Manager
-    import xxtea
     TEA_KEY = b'$yz#z0X78'  # xxtea秘钥
     TEA_SIG = b'0x0305~yz'  # xxtea签名
 
@@ -135,7 +167,7 @@ class BVM:  # Bundle Version Manager
         Log.i('保存打包日志 BEGIN')
         version = note['version']
         notepath = os.path.join(self.notedir, self.name_note(note['mode'], version))
-        make_parentdir(notepath)
+        FileKit.make_parentdir(notepath)
         with open(notepath, 'w') as fp:
             json.dump(note, fp, indent='\t')
         Log.i('保存打包日志 END')
@@ -194,7 +226,7 @@ class BVM:  # Bundle Version Manager
         for sudir, _, files in os.walk(folder):
             for fn in files:
                 fp = os.path.join(sudir, fn)
-                fid = normposix(fp[idslice:])
+                fid = FileKit.normposix(fp[idslice:])
                 if not self._check_fileid(fid):
                     continue
                 curfiles[fid] = self._fast_gen_fileinfo(fp, prefiles.get(fid))
@@ -214,7 +246,7 @@ class BVM:  # Bundle Version Manager
         if not preinfo or mt['size'] != preinfo['size']:
             curinfo = self._gen_fileinfo(filepath, self._curminor, mt)
         else:
-            sign = self._gen_filesign(filepath)
+            sign = FileKit.get_filemd5(filepath)
             if sign == preinfo['sign']:
                 curinfo = preinfo
             else:
@@ -224,7 +256,7 @@ class BVM:  # Bundle Version Manager
     def _gen_fileinfo(self, filepath, minor, meta=None, sign=None):
         Log.i("put file:", filepath)
         info = meta or self._gen_filemeta(filepath)
-        info['sign'] = sign or self._gen_filesign(filepath)
+        info['sign'] = sign or FileKit.get_filemd5(filepath)
         info[self.kMinor] = minor
         # info['package'] = 'xxx.pak'
         # info['encrypt'] = {encrypt file info}
@@ -236,13 +268,6 @@ class BVM:  # Bundle Version Manager
         meta = os.stat(filepath)
         # return {'size': meta.st_size, 'mtime': math.floor(meta.st_mtime * 1000)}
         return {'size': meta.st_size}
-
-    @staticmethod
-    def _gen_filesign(filepath):
-        with open(filepath, 'rb') as fp:
-            h = hashlib.md5()
-            h.update(fp.read())
-            return h.hexdigest()
 
     def _check_dirtyfiles(self):
         hashmap = {}
@@ -287,7 +312,7 @@ class BVM:  # Bundle Version Manager
             curinfo = self._curnote['files'][fid]  # type: dict
             curinfo['encrypt'] = self._gen_fileinfo(fdst, curinfo[self.kMinor])  # 记录plist加密
         else:
-            safe_copyfile(fsrc, fdst)
+            FileKit.safe_copyfile(fsrc, fdst)
         return True
 
     def _encrypt_file(self, src, dst):
@@ -295,9 +320,9 @@ class BVM:  # Bundle Version Manager
             data = sfp.read()
             n = len(data)
             data += bytes((4 - n % 4) & 3) + bytes([n & 0xFF, n >> 8 & 0xFF, n >> 16 & 0xFF, n >> 24 & 0xFF])
-            data = self.xxtea.encrypt(data, self._tea, padding=False)
+            data = xxtea.encrypt(data, self._tea, padding=False)
             data = self.TEA_SIG + data
-            make_parentdir(dst)
+            FileKit.make_parentdir(dst)
             with open(dst, 'wb') as dfp:
                 dfp.write(data)
 
@@ -308,18 +333,18 @@ class BVM:  # Bundle Version Manager
         for pkg, fset in self._fill_scripts_packages(luafiles).items():
             if not fset:
                 continue
-            pkgname = normposix(self.LUA_DIR + pkg + self.SCRIPT_PKG_SUFFIX)
+            pkgname = FileKit.normposix(self.LUA_DIR + pkg + self.SCRIPT_PKG_SUFFIX)
             if self._is_dirty_scirpts_package(fset, dirtymap):
                 pkgdir = os.path.join(pkgroot, pkg)
                 for fid in fset:
                     fsrc = os.path.join(self._projdir, fid)
                     fdst = os.path.join(pkgdir, fid)
-                    safe_copyfile(fsrc, fdst)
+                    FileKit.safe_copyfile(fsrc, fdst)
                     curfiles[fid]['package'] = pkg  # 记录脚本所在包
                 archive = shutil.make_archive(pkgdir, 'zip', os.path.join(pkgdir, self.LUA_DIR))
                 pkgpath = os.path.join(outdir, os.path.normpath(pkgname))
                 Log.i('zip lua', pkgpath)
-                make_parentdir(pkgpath)
+                FileKit.make_parentdir(pkgpath)
                 self._encrypt_file(archive, pkgpath)
                 curinfo = self._gen_fileinfo(pkgpath, self._curminor)  # 记录脚本加密包信息
             else:
@@ -364,7 +389,7 @@ class BVM:  # Bundle Version Manager
         vstr = '{%d,%d}' % tuple(self._curnote['version'])
         text = 'return {\nversion=%s,\nfiles={\n%s\n}}' % (vstr, fstr)
         dist = os.path.join(outdir, 'flist')
-        make_parentdir(dist)
+        FileKit.make_parentdir(dist)
         if self._curnote['mode'] != self.kBUNDLE:
             with zipfile.ZipFile(dist, 'w', zipfile.ZIP_DEFLATED) as fp:
                 fp.writestr('newflist', text)
@@ -375,6 +400,15 @@ class BVM:  # Bundle Version Manager
 
     def _gen_subfiles(self, subfiles, outdir, subdir):
         pass  # 分包资源处理
+
+    @staticmethod
+    def _log_filesize(tardir):
+        size = 0
+        for root, _, files in os.walk(tardir):
+            for fn in files:
+                meta = os.stat(os.path.join(root, fn))
+                size += meta.st_size
+        print('本次热更新%f(MB)' % (size / 1024 / 1024))
 
     def build(self, projdir, version, mode, subfiles=None):
         self._projdir = projdir
@@ -387,8 +421,11 @@ class BVM:  # Bundle Version Manager
         tmpdir = os.path.join(self.bvmdir, 'tmp')
         usefiles = self._built_files(tardir, tmpdir)
         assert usefiles, 'no file modified'
-        if subfiles and mode != self.kHOTFIX:
-            self._gen_subfiles(subfiles, tardir, subdir)
+        if mode != self.kHOTFIX:
+            if subfiles:
+                self._gen_subfiles(subfiles, tardir, subdir)
+        else:
+            self._log_filesize(tardir)
         self._gen_manifest(tardir)
         # 自动上传ftp（未实现）
         self.save_note(self._curnote)
@@ -462,7 +499,7 @@ class CocosProject:
                     continue
                 src = os.path.join(root, fn)
                 dst = os.path.join(parentdir, fn)
-                if os.path.isfile(dst) and not is_meta_modified(src, dst):
+                if os.path.isfile(dst) and not FileKit.is_meta_modified(src, dst):
                     continue
                 Log.i('copy', dst)
                 shutil.copy2(src, dst)  # copy file and stat
@@ -475,6 +512,46 @@ class CocosProject:
             b = chars[i] ^ key[i % ksize]
             array.append('0x%x' % b)
         return array
+
+    @staticmethod
+    def encrypt_shader(shader):
+        shader_size = len(shader)
+        shader_hash = BinKit.hash_bkdr(shader)
+        print(shader_size, shader_hash)
+        print('-------------------------------------------')
+        print(shader)
+        print('-------------------------------------------')
+
+        key = b'shader'
+        klen = len(key)
+        hexes, array = '', []
+        for i in range(shader_size):
+            s = '0x%x' % (ord(shader[i]) ^ key[i % klen])
+            array.append(s)
+            hexes += s + ','
+            if (i + 1) % 16 == 0:
+                hexes += '\n'
+        output_size = len(array)
+        heads = '%s,%s,%s,\n' % (
+            ','.join(BinKit.bytes2hex(key)),
+            ','.join(BinKit.bytes2hex(bytes([shader_hash       & 0xFF,
+                                             shader_hash >> 8  & 0xFF,
+                                             shader_hash >> 16 & 0xFF,
+                                             shader_hash >> 24 & 0xFF]))),
+            ','.join(BinKit.bytes2hex(bytes([output_size       & 0xFF,
+                                             output_size >> 8  & 0xFF,
+                                             output_size >> 16 & 0xFF,
+                                             output_size >> 24 & 0xFF])))
+        )
+        hexes = heads + hexes[0:-1]
+        output_size += 14  # magic + hash + size
+        print(('[%d]={\n' % output_size) + hexes + '\n};')
+        print('-------------------------------------------')
+        shader = ''
+        for c in array:
+            shader += chr(int(c, 16))
+        print(shader)
+        print('-------------------------------------------')
 
 class CocosBuilder(CocosProject):
     def __init__(self, projdir):
@@ -509,11 +586,14 @@ class CocosBuilder(CocosProject):
         print('done %smin' % round((time.time()-t) / 60, 3))
 
 def main():
-    builder = CocosBuilder('/Users/joli/Work/LightPro/Client')
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz')
+    builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
     # builder.make_client_sheet()
     # builder = CocosBuilder(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     builder.make_bundle(16774, mode=BVM.kBUNDLE)
     # builder.make_bundle(16774, mode=BVM.kHOTFIX)
+    from jonlin.utils import FS
+    FS.explorer(builder.builddir)
 
 if __name__ == '__main__':
     main()

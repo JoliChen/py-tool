@@ -109,6 +109,7 @@ class XXTEA:
         if bsig:
             sig_len = len(bsig)
             if buffer[0: sig_len] != bsig:
+                print("sign error")
                 return buffer
             buffer = buffer[sig_len:]
         return xxtea.decrypt(buffer, bkey, padding=False)

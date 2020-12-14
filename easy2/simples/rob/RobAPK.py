@@ -80,12 +80,14 @@ class DeApkBase:
 class RobSnsgz(DeApkBase):  # 少年三国志
     def __init__(self):
         DeApkBase.__init__(self, 'snsgz2')
+        self.root = '/Users/joli/Desktop/snsgz2/assets'
         self.odir = os.path.join(self.root, self.name + '_res')
         self.idir = os.path.join(self.dist, 'assets/res')
         self.flist = os.path.join(self.root, self.name + '_files.txt')
 
     def extract_files(self):
-        files = FS.walk_files(self.idir, ewhites=('.png', '.jpg'), cut=len(self.idir) + 1)
+        resroot = os.path.join(self.root, 'res')
+        files = FS.walk_files(resroot, ewhites=('.png', '.jpg'), cut=len(resroot)+1)
         print(len(files))
         s = ''
         for f in files:
@@ -102,19 +104,19 @@ class RobSnsgz(DeApkBase):  # 少年三国志
         return files
 
     def pull_files(self):
-        fs = '/Users/joli/Documents/AndroidStudio/DeviceExplorer/meizu-m3s-Y15QKBPR242LL/data/data/com.youzu.snsgz2.aligames/files'
         files = self.read_files()
         misss = []
         for i in range(len(files)):
             fn = files[i]
-            i += 1
-            src = os.path.join(fs, 'hack%d%s' % (i, FS.extensions(fn)))
-            if os.path.isfile(src):
-                dst = os.path.join(self.odir, fn)
-                FS.moveto(src, dst)
-            else:
-                misss.append(i)
+            src = '/data/data/com.youzu.snsgz2.aligames/files/hack%d%s' % (i+1, FS.extensions(fn))
+            dst = os.path.join(self.odir, fn)
+            FS.make_parent(dst)
+            cmd = 'adb pull "%s" "%s"' % (src, dst)
+            os.system(cmd)
+            if not os.path.isfile(dst):
+                misss.append(fn)
         print(misss)
+        print("done")
         # self.load_manifest()
         # self.pull_hack_files(self.odir, self.read_files())
 
@@ -537,12 +539,6 @@ class RobBZDX:
                 assetutil.unityfs(fn, fd)
         # self.make_shader()
 
-    def make_shader(self):
-        from com.dev import MakeShader
-        shader = """
-"""
-        MakeShader.encode_shader(shader)
-
 class RobKHSG(DeApkBase):  # 开黑三国
     def __init__(self):
         DeApkBase.__init__(self, 'khsg')
@@ -924,3 +920,29 @@ class RobXXZYD(DeApkBase):  # 修仙在云端
         dstdir = os.path.join(root, 'assets_dst')
         tmpdir = os.path.join(root, 'assets_tmp')
         assetutil.sh_unityfs(srcdir, dstdir, tmpdir)
+
+class RobYQCR(DeApkBase):  # 一拳超人
+    def __init__(self):
+        DeApkBase.__init__(self, 'yqcr')
+
+    @staticmethod
+    def decrypt_res():
+        # srcpng = '/Users/joli/Desktop/31323621.plist'
+        # dstpng = '/Users/joli/Desktop/31323621_1.plist'
+        # sign = b'0x0305~yz'
+        # keys = RobCom.XXTEA.fmt_key(b'$yz#z0X78')
+
+        srcpng = '/Users/joli/Downloads/yqcr/assets/release/000/0c2e3551d83f09bf2e63f172fcfaca60000C00.png'
+        dstpng = '/Users/joli/Downloads/yqcr/assets/release/000/0c2e3551d83f09bf2e63f172fcfaca60000C00_1.png'
+        sign = b'SSKOSISNIUBILITY' + bytes([0x10, 0x10, 0x11, 0x3F]) + b'SISN'
+        # keys = RobCom.XXTEA.fmt_key(b'KOSSOURCESIZEKEY')
+        # keys = RobCom.XXTEA.fmt_key(b'KOSSOURCE')
+        # keys = RobCom.XXTEA.fmt_key(b'SSKOSISNIUBILITYKOSSOURCESIZEKEY')
+        # keys = RobCom.XXTEA.fmt_key(b'KOS')
+        keys = RobCom.XXTEA.fmt_key(b'KOSISNIUBILITY')
+
+        with open(srcpng, 'rb') as srcfs:
+            bf = srcfs.read()
+            bf = RobCom.XXTEA.decrypt(bf, sign, keys)
+            with open(dstpng, 'wb') as dstfs:
+                dstfs.write(bf)
