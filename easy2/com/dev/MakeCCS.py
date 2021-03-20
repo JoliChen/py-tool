@@ -587,11 +587,13 @@ class CocosBuilder(CocosProject):
 
 def main():
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz')
-    builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz_bt')
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
+    builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new')
     # builder.make_client_sheet()
     # builder = CocosBuilder(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    builder.make_bundle(16774, mode=BVM.kBUNDLE)
-    # builder.make_bundle(16774, mode=BVM.kHOTFIX)
+    # builder.make_bundle(16774, mode=BVM.kBUNDLE, minor=99319)
+
     from jonlin.utils import FS
     FS.explorer(builder.builddir)
 

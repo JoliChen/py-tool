@@ -1064,13 +1064,13 @@ def make_resource(make_dir, source_dir, target_dir):
 def main():
     working_dir = '/Users/joli/Desktop/test/asset'
     # 乱斗
-    # project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou'
-    # target_dir = os.path.join(project_dir, 'luandou_xc/app_shenshi/package/FuYao')
-    # source_dir = os.path.join(project_dir, 'resource/xiuxian')
+    project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou'
+    target_dir = os.path.join(project_dir, 'luandou_xc/app_tendo/package/wlsg')
+    source_dir = os.path.join(project_dir, 'resource/sanguo_new_bt_vn')
     # # 战国
-    project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/zhanguo'
-    target_dir = os.path.join(project_dir, 'zhanguo_xc/app_tendo/package/sgdyx')
-    source_dir = os.path.join(project_dir, 'resource/dudai_vn')
+    # project_dir = '/Users/joli/proj/sdk_uzone/trunk/projects/zhanguo'
+    # target_dir = os.path.join(project_dir, 'zhanguo_xc/app_tendo/package/sgdyx')
+    # source_dir = os.path.join(project_dir, 'resource/dudai_vn')
 
     # # 打包资源
     magic = b'f-fast'

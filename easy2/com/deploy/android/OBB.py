@@ -5,13 +5,35 @@
 
 import os
 import shutil
+import biplist
 from jonlin.utils import FS
 
 class ObbBuilder:
 
     @staticmethod
+    def testfiles():
+        dir0 = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou/luandou_as/app/Tendo/build/outputs/apk/wlsg/debug/AppTendo-wlsg-debug'
+        dir1 = '/Users/joli/proj/sdk_uzone/trunk/projects/luandou/luandou_as/app/Tendo/build/outputs/apk/wlsg/debug/AppTendo-wlsg-debug1'
+        files0 = FS.walk_files(dir0, cut=len(dir0) + 1)
+        files1 = FS.walk_files(dir1, cut=len(dir1) + 1)
+        print(len(files0), len(files1))
+        filemap = {}
+        for f in files0:
+            filemap[f] = True
+        for f in files1:
+            filemap[f] = True
+        for k, v in filemap.items():
+            if k not in files0:
+                print("miss at 0:", k)
+            if k not in files1:
+                print("miss at 1:", k)
+            md5_0 = FS.md5(os.path.join(dir0, k))
+            md5_1 = FS.md5(os.path.join(dir1, k))
+            if md5_0 != md5_1:
+                print("file difference", k)
+
+    @staticmethod
     def build(work_dir):
-        import biplist
         config = biplist.readPlist(os.path.join(work_dir, 'config.plist'))
         curdir = config['work_dir'] if 'work_dir' in config else work_dir
 

@@ -6,6 +6,9 @@ import json
 import os
 import shutil
 import zlib
+
+import openpyxl
+import demjson
 import requests
 from jonlin.utils import FS, Log, Bit
 from jonlin.cl import Shell
@@ -324,27 +327,58 @@ def test_hack_zlib():
 def test_hack_sqlite3():
     pass
 
-def test_json2excel():
-    import openpyxl
-    import demjson
+class Data2Excel:
+    class ExcelInfo:
+        def __init__(self):
+            self.datas = []
+            self.ckeys = []
+            self.skeys = []
+            self.types = []
 
-    def _keysort(v):
-        v = v.lower()
-        if 'id' == v:
-            return 0
-        if 'id' in v:
-            return 1
-        if 'type' == v:
-            return 2
-        if 'type' in v:
-            return 3
-        if 'name' == v:
-            return 4
-        if 'name' in v:
-            return 5
-        return 6
+    def __init__(self):
+        pass
 
-    def _guess_type(v):
+    @staticmethod
+    def build_sheet(sheet, title: str, info: ExcelInfo):
+        sheet.title = title
+        sheet.append([title])
+        # set client line
+        row = ['CLIENT']
+        row.extend(info.ckeys)
+        sheet.append(row)
+        # set types line
+        row = ['']
+        row.extend(info.types)
+        sheet.append(row)
+        # set server line
+        row = ['SERVER']
+        row.extend(info.skeys)
+        sheet.append(row)
+        # set data matrix
+        for line in info.datas:
+            row = ['']
+            row.extend(line)
+            sheet.append(row)
+
+    def guess_info_by_list(self, source, id_field):
+        info = self.ExcelInfo()
+        for line in source:
+            for k, v in line.items():
+                pass
+        return info
+        # name = FS.filename(file)
+        # wb = openpyxl.Workbook()
+        # # print(wb.get_sheet_names())
+        # _build_book1(wb, conf, name, ('ed', 'hg'))
+        # dstfile = os.path.join(dst, name + '.xlsx')
+        # FS.make_parent(dstfile)
+        # wb.save(dstfile)
+
+    def guess_info_by_dict(self, source):
+        pass
+
+    @staticmethod
+    def guess_type(v):
         if isinstance(v, int):
             return 'int'
         if isinstance(v, float):
@@ -357,7 +391,8 @@ def test_json2excel():
             return 'list'
         raise RuntimeError('unknow type ' + v)
 
-    def _build_sheet1(sheet, config, title, flat=False):  # 要求config是二维数组或二维字典
+def test_json2excel():
+    def _build_sheet1(sheet, config, title, flat=False):  # 要求config是二维数组或字典
         sheet.title = title
         ckey = []
         skey = []
@@ -621,11 +656,38 @@ def test_hack_apk():
     # deapk.reinstall()
     # deapk.extract_files()
     # deapk.pull_files()
-    deapk.decrypt_res()
+    # deapk.decrypt_res()
     # deapk.pull_files()
+
+def test_hack_h5():
+    # from simples.rob import RobH5
+    # deh5 = RobH5.DeDMXKL()
+    # deh5.de_json()
+    # print('done')
+
+    # assets = '/Users/joli/Downloads/xian_M205161_OfficialAd_LtshareSocial/assets'
+    # for par, _, files in os.walk(assets):
+    #     for fn in files:
+    #         ff = os.path.join(par, fn)
+    #         with open(ff, 'rb') as fp:
+    #             buf = fp.read()
+    #         if buf and buf[12:19] == b'UnityFS':
+    #             print('write:', ff)
+    #             with open(ff, 'wb') as fp:
+    #                 fp.write(buf[12:])
+
+    ass = '/Users/joli/Downloads/Hack/Tale.of.Immortal.Early.Access/guigubahuang_Data/sharedassets0.assets'
+    as1 = '/Users/joli/Downloads/Hack/Tale.of.Immortal.Early.Access/guigubahuang_Data/sharedassets0.assets1'
+    with open(ass, 'rb') as fp:
+        buf = fp.read()
+        buf = buf[20:]
+        buf = b'UnityFS' + bytes([0, 0, 0, 0, 0x06, 0x35, 0x2E, 0x78, 0x2E, 0x78, 0]) + buf
+    with open(as1, 'wb') as fp:
+        fp.write(buf)
 
 def main():
     pass
+    test_hack_h5()
     # test_json2excel()
     # test_load_cdn_files()
     # test_hack_xor()
@@ -633,4 +695,4 @@ def main():
     # test_hack_luac()
     # test_hack_zlib()
     # test_hack_respack()
-    test_hack_apk()
+    # test_hack_apk()

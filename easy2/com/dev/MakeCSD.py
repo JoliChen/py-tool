@@ -43,24 +43,38 @@ class MakeCSD:
         return csd_dom.toxml(encoding='utf-8') if changed else None
 
     # 修改画布中文本的颜色
-    def modify_dom_textcolor(self, csd_file, *tasks):
+    def modify_dom_text(self, csd_file, *tasks):
         csd_dom, changed = xml.dom.minidom.parse(csd_file), False
         for node in csd_dom.getElementsByTagName(kXmlNode):
             if kTypeText == node.getAttribute('ctype'):
-                color = self.get_color(node)
-                if not color:
-                    continue
-                for t in tasks:
-                    if not self.is_equal_color(t['old'], color):
-                        continue
-                    new_color = t['new']
-                    if new_color:
-                        self.set_color(node, new_color)
-                    outline = t['outline']
-                    if outline:
-                        self.set_outline(node, outline)
-                    changed = True
+                for task in tasks:
+                    changed |= self.modify_dom_text0(csd_dom, node, task)
         return csd_dom.toxml(encoding='utf-8') if changed else None
+
+    def modify_dom_text0(self, dom, node, task):
+        if 'old_color' in task:
+            color = self.get_color(node)
+            if not color or not self.is_equal_color(color, task['old_color']):
+                return False
+        if 'old_outline' in task:
+            outline = self.get_outline(node)
+            if not outline or not not self.is_equal_color(outline, task['old_outline']):
+                return False
+        if 'old_shadow' in task:
+            shadow = self.get_shadow(node)
+            if not shadow or not not self.is_equal_color(shadow, task['old_shadow']):
+                return False
+        changed = False
+        if 'new_color' in task:
+            self.set_color(node, task['new_color'])
+            changed = True
+        if 'new_outline' in task:
+            self.set_outline(node, task['new_outline'])
+            changed = True
+        if 'new_shadow' in task:
+            self.set_shadow(node, task['new_shadow'])
+            changed = True
+        return changed
 
     # 修改画布中的字体
     def modify_dom_font(self, csd_file, font_name, user_ctypes):
@@ -116,71 +130,59 @@ class MakeCSD:
                 changed = True
         return changed
 
-    # 修改画布中所有的按钮皮肤
-    def modify_dom_btn_skin(self, csd_file, *tasks):
+    # 修改画布中所有的按钮
+    def modify_dom_btn(self, csd_file, *tasks):
         csd_dom, changed = xml.dom.minidom.parse(csd_file), False
         for node in csd_dom.getElementsByTagName(kXmlNode):
             if kTypeButton != node.getAttribute('ctype'):
                 continue
-            for t in tasks:
-                if not self.validate_button(node, t['feature']):
-                    # print('------------------- not validate_button')
-                    continue
-                # print(node.getAttribute('Name'))
-                # print(get_position(node))
-                self.modify_btn_skin(node, t['new'])
-                changed = True
+            for task in tasks:
+                changed |= self.modify_dom_btn0(csd_dom, node, task)
         # print(csd_dom.toxml(encoding='utf-8'))
         return csd_dom.toxml(encoding='utf-8') if changed else None
 
-    # 修改按钮皮肤
-    def modify_btn_skin(self, node, feature):
-        skin = feature.get('skin')
-        size = feature.get('size')
-        title_color = feature.get('title_color')
-        title_outline = feature.get('title_outline')
-        title_shadow = feature.get('title_shadow')
-        children = []
-        for prop in node.childNodes:
-            if prop.nodeName == 'Children':
-                for child in prop.childNodes:
-                    if child.nodeName == kXmlNode:
-                        children.append(child)
-            elif prop.nodeName == 'NormalFileData':
-                if skin:
-                    prop.setAttribute('Path', skin['normal'])
-                    if 'plist' in skin:
-                        self.set_plist_prop(prop, skin['plist'])
-            elif prop.nodeName == 'PressedFileData':
-                if skin:
-                    prop.setAttribute('Path', skin['pressed'])
-                    if 'plist' in skin:
-                        self.set_plist_prop(prop, skin['plist'])
-            elif prop.nodeName == 'DisabledFileData':
-                if skin:
-                    prop.setAttribute('Path', skin['disabled'])
-                    if 'plist' in skin:
-                        self.set_plist_prop(prop, skin['plist'])
-        if children:
-            for child in children:
-                if child.getAttribute('ctype') == kTypeText:
-                    if title_color:
-                        self.set_color(child, title_color)
-                    if title_outline:
-                        self.set_outline(child, title_outline)
-                    if title_shadow:
-                        self.set_shadow(child, title_shadow)
-            if size:
-                self.set_size_center_children(node, children, size)
-        else:
-            if title_color:
-                self.set_color(node, title_color)
-            if title_outline:
-                self.set_outline(node, title_outline)
-            if title_shadow:
-                self.set_shadow(node, title_shadow)
-            if size:
-                self.set_size(node, size['width'], size['height'])
+    def modify_dom_btn0(self, dom, node, task):
+        if 'old_skin' in task:
+            if not self.validate_button_skin(node, task['old_skin']):
+                return False
+        changed = False
+        if 'new_skin' in task:
+            new_skin = task['new_skin']
+            for prop in node.childNodes:
+                if prop.nodeName == 'NormalFileData':
+                    if 'normal' in new_skin:
+                        prop.setAttribute('Path', new_skin['normal'])
+                        changed = True
+                    if 'plist' in new_skin:
+                        self.set_plist_prop(prop, new_skin['plist'])
+                        changed = True
+                elif prop.nodeName == 'PressedFileData':
+                    if 'pressed' in new_skin:
+                        prop.setAttribute('Path', new_skin['pressed'])
+                        changed = True
+                    if 'plist' in new_skin:
+                        self.set_plist_prop(prop, new_skin['plist'])
+                        changed = True
+                elif prop.nodeName == 'DisabledFileData':
+                    if 'disabled' in new_skin:
+                        prop.setAttribute('Path', new_skin['disabled'])
+                        changed = True
+                    if 'plist' in new_skin:
+                        self.set_plist_prop(prop, new_skin['plist'])
+                        changed = True
+        if 'new_color' in task or 'new_outline' in task or 'new_shadow' in task:
+            text_nodes = []
+            for prop in node.childNodes:
+                if prop.nodeName == 'Children':
+                    for child in prop.childNodes:
+                        if child.nodeName == kXmlNode and child.getAttribute('ctype') == kTypeText:
+                            text_nodes.append(child)
+            if text_nodes:
+                for child in text_nodes:
+                    changed |= self.modify_dom_text0(dom, child, task)
+            else:
+                changed |= self.modify_dom_text0(dom, node, task)
+        return changed
 
     # 设置节点尺寸并把子节点居中对齐
     def set_size_center_children(self, node, children, size):
@@ -292,14 +294,6 @@ class MakeCSD:
                         if child.nodeName == 'Children':
                             return child
 
-    #  根据特征确定按钮
-    def validate_button(self, node, feature):
-        if feature:
-            if 'skin' in feature:
-                if not self.validate_button_skin(node, feature['skin']):
-                    return False
-        return True
-
     # 确定按钮皮肤
     def validate_button_skin(self, node, skin):
         flag = False
@@ -399,6 +393,17 @@ class MakeCSD:
             if prop.nodeName == 'ShadowColor':
                 self.set_prop_color(prop, color)
                 break
+
+    @staticmethod
+    def get_shadow(node):
+        for prop in node.childNodes:
+            if prop.nodeName == 'ShadowColor':
+                return {
+                    'a': int(prop.getAttribute('A')),
+                    'r': int(prop.getAttribute('R')),
+                    'g': int(prop.getAttribute('G')),
+                    'b': int(prop.getAttribute('B')),
+                }
 
     @staticmethod
     def set_position(node, x=None, y=None):
@@ -523,7 +528,7 @@ def batch_modify_button(csd_dir, tasks):
                 continue
             f = os.path.join(par, name)
             print(f)
-            buffer = maker.modify_dom_btn_skin(f, *tasks)
+            buffer = maker.modify_dom_btn(f, *tasks)
             if not buffer:
                 continue
             with open(f, 'wb') as fp:
@@ -601,40 +606,35 @@ def simple_modify_button(csd_dir):
     #         }
     #     }
     # )
-    tasks.append({
-        'feature': {
-            'skin': {
-                'normal': 'gongyong_anniu_1.png'
-            }
+    batch_modify_button(csd_dir, [
+        {
+            'old_skin': {
+                'normal': 'anniu_lan.png',
+                # 'pressed': 'anniu_lan.png',
+                # 'disabled': 'anniu_lan.png',
+                'plist': 'pic/ui/gongyong_btn.plist'
+            },
+            # 'new_skin': {}
         },
-        'new': {
-            'title_color': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
-            'title_outline': {'a': 255, 'r': 97, 'g': 59, 'b': 32},
-        }
-    })
-    tasks.append({
-        'feature': {
-            'skin': {
-                'normal': 'gongyong_anniu_4.png'
-            }
+        {
+            'old_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+            'new_color': {'a': 255, 'r': 249, 'g': 249, 'b': 249},
+            'old_outline': {'a': 255, 'r': 108, 'g': 72, 'b': 44},
+            'new_outline': {'a': 255, 'r': 182, 'g': 21, 'b': 30},
         },
-        'new': {
-            'title_color': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
-            'title_outline': {'a': 255, 'r': 38, 'g': 92, 'b': 35},
-        }
-    })
-    tasks.append({
-        'feature': {
-            'skin': {
-                'normal': 'gongyong_anniu_5.png'
-            }
+        {
+            'old_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+            'new_color': {'a': 255, 'r': 249, 'g': 249, 'b': 249},
+            'old_outline': {'a': 255, 'r': 49, 'g': 113, 'b': 131},
+            'new_outline': {'a': 255, 'r': 201, 'g': 56, 'b': 28},
         },
-        'new': {
-            'title_color': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
-            'title_outline': {'a': 255, 'r': 8, 'g': 83, 'b': 81},
-        }
-    })
-    batch_modify_button(csd_dir, tasks)
+        {
+            'old_color': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
+            'new_color': {'a': 255, 'r': 249, 'g': 249, 'b': 249},
+            'old_outline': {'a': 255, 'r': 138, 'g': 97, 'b': 38},
+            'new_outline': {'a': 255, 'r': 201, 'g': 56, 'b': 28},
+        },
+    ])
 
 def simple_modify_font(csd_dir):
     maker = MakeCSD()
@@ -678,7 +678,7 @@ def simple_modify_outline(csd_dir):
             with open(f, 'wb') as fp:
                 fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
 
-def simple_modify_textcolor(csd_dir):
+def simple_modify_text(csd_dir):
     maker = MakeCSD()
     for (par, _, files) in os.walk(csd_dir):
         for name in files:
@@ -687,18 +687,19 @@ def simple_modify_textcolor(csd_dir):
             f = os.path.join(par, name)
             # f = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb/Login/fenbao.csd'
             print(f)
-            buffer = maker.modify_dom_textcolor(f, *[
-                # {
-                #     'old': {'a': 255, 'r': 255, 'g': 240, 'b': 229},
-                #     'new': {'a': 255, 'r': 255, 'g': 255, 'b': 255},
-                #     'user_ctype': kTypeButton
-                # }
+            buffer = maker.modify_dom_text(f, *[
                 {
-                    # 'old': {'a': 255, 'r': 109, 'g': 45, 'b': 6},
-                    'old': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
-                    'new': {'a': 255, 'r': 228, 'g': 228, 'b': 231},
-                    'outline': {'a': 255, 'r': 50, 'g': 60, 'b': 87}
-                }
+                    'old_color': {'a': 255, 'r': 228, 'g': 228, 'b': 231},
+                    'new_color': {'a': 255, 'r': 255, 'g': 0, 'b': 0},
+                },
+                {
+                    'old_color': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
+                    'new_color': {'a': 255, 'r': 249, 'g': 249, 'b': 249},
+                },
+                {
+                    'old_color': {'a': 255, 'r': 249, 'g': 240, 'b': 220},
+                    'new_color': {'a': 255, 'r': 32, 'g': 30, 'b': 56},
+                },
             ])
             if not buffer:
                 continue
@@ -732,10 +733,11 @@ def simple_modify_fontsize(csd_dir):
 
 def main():
     csd_dir = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb'
-    # simple_modify_button(csd_dir)
-    simple_modify_font(csd_dir)
+    simple_modify_button(csd_dir)
+    simple_modify_text(csd_dir)
+
+    # simple_modify_font(csd_dir)
     # simple_modify_outline(csd_dir)
-    # simple_modify_textcolor(csd_dir)
     # simple_modify_fontsize(csd_dir)
     print("done")
 

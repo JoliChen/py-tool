@@ -112,8 +112,8 @@ def main():
     from jonlin.utils import Log
     Log.DEFAULT_LEVEL = Log.DEBUG
     # 执行指令
-    cls, opt = sys.argv[1], sys.argv[2]
-    getattr({'test': CmdTest(), 'make': CmdMake()}[cls], '%s_%s' % (cls, opt))()
+    opt, tag = sys.argv[1], sys.argv[2]
+    getattr({'test': CmdTest(), 'make': CmdMake()}[opt], '%s_%s' % (opt, tag))()
 
 if __name__ == '__main__':
     main()
