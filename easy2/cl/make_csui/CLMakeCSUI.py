@@ -5,13 +5,18 @@
 
 import os
 import sys
+import optparse
+from scripts.MakeCSUI import LuaCSBuilder
 
-# 添加根目录搜索路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# print(sys.path)
+def do_test():
+    cs = LuaCSBuilder()
+    cs.build(src=os.path.join('', 'csui/src'), dst=os.path.join('', 'csui/dst'))
+
+def do_build(opts):
+    cs = LuaCSBuilder(opts.dangling, opts.hidden, opts.repeat)
+    cs.build(opts.src, opts.dst)
 
 def main():
-    import optparse
     parser = optparse.OptionParser(description='make csui tool')
     parser.add_option('--src',
                       dest='src',
@@ -38,11 +43,11 @@ def main():
                       type='int',
                       default=0,
                       help='重名节点[0-不处理, 1-输出日志, 2-删除节点] 默认0')
-    (options, args) = parser.parse_args(sys.argv[1:])
-
-    from com.dev.MakeCSUI import LuaCSBuilder
-    cs = LuaCSBuilder(options.dangling, options.hidden, options.repeat)
-    cs.build(options.src, options.dst)
+    (opts, args) = parser.parse_args(sys.argv[1:])
+    if opts and opts.src:
+        do_build(opts)
+    else:
+        do_test()
 
 if __name__ == '__main__':
     main()

@@ -106,12 +106,10 @@ class SvnClient:
         cmd = '%s info "%s"' % (self.cl, localdir)
         with os.popen(cmd) as fp:
             for s in fp.readlines():
-                if s.find('Revision:') == -1:
-                    continue
-                sversion = re.findall(r'\d+', s)
-                if not sversion:
-                    continue
-                return int(sversion[0])
+                if s.find('Revision:')==0 or s.find('版本:')==0:
+                    rev = re.findall(r'\d+', s)
+                    if rev:
+                        return int(rev[0])
 
 class BVM:  # Bundle Version Manager
     TEA_KEY = b'$yz#z0X78'  # xxtea秘钥
@@ -585,14 +583,18 @@ class CocosBuilder(CocosProject):
         bvm.build(self.ccsrtdir, version, mode)
         print('done %smin' % round((time.time()-t) / 60, 3))
 
+def unicode2hex(unicode):
+    unicode = re.sub("^U\+0*", '', unicode)
+    return '0x' + unicode
+
 def main():
+    # builder = CocosBuilder(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz_bt')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
     builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new')
     # builder.make_client_sheet()
-    # builder = CocosBuilder(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    # builder.make_bundle(16774, mode=BVM.kBUNDLE, minor=99319)
+    builder.make_bundle(16774, mode=BVM.kBUNDLE)
 
     from jonlin.utils import FS
     FS.explorer(builder.builddir)

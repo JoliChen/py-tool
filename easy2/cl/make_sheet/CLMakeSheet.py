@@ -2,15 +2,43 @@
 # @Time    : 2019/11/1 11:13 PM
 # @Author  : Joli
 # @Email   : 99755349@qq.com
-
+import os
 import sys
+import optparse
+from scripts.MakeSheet import ConfigExportor, TargetRequest
 
-# 添加根目录搜索路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# print(sys.path)
+def do_test():
+    server_dir = ''
+    client_dir = ''
+    excels_dir = ''
+    ConfigExportor().export(excels_dir=excels_dir,
+                            excels_manifest=os.path.join(excels_dir, '0.manifest'),
+                            client_data_dir=client_dir,
+                            client_data_format=ConfigExportor.SINGLE_JSON_LINE,
+                            client_code_dir=os.path.join(self.root, 'excel/clientclass'),
+                            client_template='/Users/joli/Work/StonePro/stonedocs/Tools/MakeSheet/template_csharp.json',
+                            server_data_dir=server_dir,
+                            server_date_format=ConfigExportor.SINGLE_BINARY,
+                            server_code_dir=None,
+                            server_template=None,
+                            interruptible=False)
+
+def do_export(opts):
+    client = TargetRequest()
+    client.data_dir = opts.ClientDataDir
+    client.data_fmt = opts.ClientDataFormat
+    client.code_dir = opts.ClientClassDir
+    client.code_template = opts.ClientClassTemplate
+    client.dejson = opts.ClientDejson
+    server = TargetRequest()
+    server.data_dir = opts.ServerDataDir
+    server.data_fmt = opts.ServerDataFormat
+    server.code_dir = opts.ServerClassDir
+    server.code_template = opts.ServerClassTemplate
+    server.dejson = opts.ServerDejson
+    ConfigExportor().export(opts.ExcelsDir, opts.Manifest, client, server, opts.interruptible)
 
 def main():
-    import optparse
     parser = optparse.OptionParser(description='make sheet tool')
     parser.add_option('-i',
                       dest='ExcelsDir',
@@ -78,21 +106,11 @@ def main():
                       default=False,
                       help='错误立即中断')
     (opts, args) = parser.parse_args(sys.argv[1:])
+    if opts and opts.ExcelsDir:
+        do_export(opts)
+    else:
+        do_test()
 
-    from com.dev.MakeSheet import ConfigExportor, TargetRequest
-    client = TargetRequest()
-    client.data_dir = opts.ClientDataDir
-    client.data_fmt = opts.ClientDataFormat
-    client.code_dir = opts.ClientClassDir
-    client.code_template = opts.ClientClassTemplate
-    client.dejson = opts.ClientDejson
-    server = TargetRequest()
-    server.data_dir = opts.ServerDataDir
-    server.data_fmt = opts.ServerDataFormat
-    server.code_dir = opts.ServerClassDir
-    server.code_template = opts.ServerClassTemplate
-    server.dejson = opts.ServerDejson
-    ConfigExportor().export(opts.ExcelsDir, opts.Manifest, client, server, opts.interruptible)
 
 if __name__ == '__main__':
     main()

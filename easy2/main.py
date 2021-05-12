@@ -39,32 +39,6 @@ class CmdMake:
     def __init__(self):
         self.root = '/Users/joli/Desktop/test'
 
-    def make_sheet(self):
-        excels_dir = os.path.join(self.root, 'excel/config')
-        client_dir = os.path.join(self.root, 'excel/client')
-        server_dir = os.path.join(self.root, 'excel/server')
-        # from com.dev.MakeSheet import SheetBuilder
-        # sb = SheetBuilder().set_editor()
-        # sb.build(excels_dir, client_dir, black_list=None, list_warn=True, list_error=True)
-
-        from com.dev.MakeSheet import ConfigExportor
-        ConfigExportor().export(excels_dir=excels_dir,
-                                excels_manifest=os.path.join(excels_dir, '0.manifest'),
-                                client_data_dir=client_dir,
-                                client_data_format=ConfigExportor.SINGLE_JSON_LINE,
-                                client_code_dir=os.path.join(self.root, 'excel/clientclass'),
-                                client_template='/Users/joli/Work/StonePro/stonedocs/Tools/MakeSheet/template_csharp.json',
-                                server_data_dir=server_dir,
-                                server_date_format=ConfigExportor.SINGLE_BINARY,
-                                server_code_dir=None,
-                                server_template=None,
-                                interruptible=False)
-
-    def make_csui(self):
-        from com.dev.MakeCSUI import LuaCSBuilder
-        cs = LuaCSBuilder()
-        cs.build(src=os.path.join(self.root, 'csui/src'), dst=os.path.join(self.root, 'csui/dst'))
-
     @staticmethod
     def make_csd():
         from com.dev import MakeCSD

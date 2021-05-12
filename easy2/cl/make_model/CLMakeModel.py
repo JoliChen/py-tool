@@ -30,7 +30,7 @@ def main():
                       help='操作类型')
     (options, args) = parser.parse_args(sys.argv[1:])
 
-    from com.dev import MakeModel
+    from scripts import MakeModel
     if options.opt == 'offset':
         offset_x, offset_y = 0, 0
         if args:

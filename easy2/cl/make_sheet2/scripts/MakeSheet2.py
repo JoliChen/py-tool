@@ -15,7 +15,7 @@ from jonlin.utils import Log, Bit, FS, Collect, Text
 
 log = Log.Logger(__file__)
 
-VERSION = 7
+VERSION = 8
 
 class _Fmt:
     NO_DIFF_FLAG = 1
@@ -48,27 +48,27 @@ class _Fmt:
     @classmethod
     def to_cast(cls, text, errors):
         if not isinstance(text, str):
-            errors.append('未知类型：' + str(text))
+            errors.append('incorrect type：' + str(text))
             return
         text = text.strip()
         if not text:
             return
         l_t = text.lower()
         if l_t not in cls._TAG_TAYPES:
-            errors.append('未知类型：' + text)
+            errors.append('incorrect type：' + text)
         else:
             return l_t
 
     @classmethod
     def to_word(cls, text, errors):
         if not isinstance(text, str):
-            errors.append('字段错误：' + str(text))
+            errors.append('incorrect key：' + str(text))
             return
         text = text.strip()
         if not text:
             return
         if not cls._RE_WORD.match(text):
-            errors.append('字段错误：' + text)
+            errors.append('incorrect key：' + text)
         else:
             return text
 
@@ -105,7 +105,7 @@ class _Fmt:
                 return i
             if isinstance(value, str) and (not value or value.isspace()):
                 return 0  # 填空的转为0
-            raise _CellError(value, '无法转整数')
+            raise _CellError(value, 'can not cast to int')
         elif 'string' == let_type:
             if isinstance(value, str):
                 return value
@@ -116,7 +116,7 @@ class _Fmt:
                 return f
             if isinstance(value, str) and (not value or value.isspace()):
                 return 0.0  # 填空的转为0
-            raise _CellError(value, '无法转小数')
+            raise _CellError(value, 'can not cast to float')
         elif 'json' == let_type:
             if isinstance(value, str):
                 s = value.strip()
@@ -127,7 +127,7 @@ class _Fmt:
             else:
                 if 0 == cls.to_int(value):
                     return ''  # 兼容填0
-            raise _CellError(value, 'json格式错误')
+            raise _CellError(value, 'can not cast to json')
 
     @classmethod
     def trans_str_symb(cls, s):
@@ -168,68 +168,75 @@ class _SheetHead:
         self.lets = []  # 数据类型
 
 class SheetBuilder:
-    def set_editor(self, out_format='binary', forceone=True):
+    def __init__(self, warndumpable=True, errordumpable=True, alertable=False):
+        self._alertable = alertable
+        self._warndumpable = warndumpable
+        self._errordumpable = errordumpable
+        self._excel_warns = {}
+        self._excel_errors = {}
+
+    def set_editor(self, out_format='binary'):
         if 'binary' == out_format:
-            self._editor = _ULOEditor(forceone)
+            self._editor = _ULOEditor()
         elif 'lua' == out_format:
             self._editor = _LUAEditor()
         # elif 'txt' == out_format:
         #     self._editor = _TXTEditor()
-        assert self._editor, '尚未支持的导出格式'
-        return self
+        assert self._editor, 'unspport export format:' + out_format
 
-    def exit_on_error(self, err_msg='导表错误，请看控制台。'):
-        if self._alert_onerror:
+    def exit_on_error(self, err_msg='error occurred, please see the console.'):
+        if self._alertable:
             from tkinter import messagebox
-            messagebox.showinfo('导表错误提示', err_msg)
+            messagebox.showinfo('error tips', err_msg)
         else:
             log.e(err_msg)
         sys.exit(1)  # 遇到错误中断
 
-    def build(self, excel_dir, out_path, black_list=None, list_warn=True, list_error=True, alert=False):
-        self._alert_onerror = alert
+    def build(self, excel_dir, out_path, denylist: list=None, allowlist: list=None):
         if not excel_dir:
-            self.exit_on_error('必须提供表文件夹')
+            self.exit_on_error('excel dir can not be empty')
             return
         if not out_path:
-            self.exit_on_error('必须提供输出路径')
+            self.exit_on_error('output path can not be empty')
             return
+        self._lookup_dict = {}
         start_t = time.time()
-        black_list = None if black_list is None else black_list.split(',')
-        self._lookup_dict, self._excel_warns, self._excel_errors = {}, {}, {}
         metalist = FileMetaList(os.path.join(excel_dir, '.version.o'), hide=True)
-        is_force = self._editor.edit_begin(out_path, is_force=metalist.isupgrade(VERSION))
+        is_force = metalist.isupgrade(VERSION)
+        is_force = self._editor.edit_begin(out_path, is_force=is_force)
         for _, _, files in os.walk(excel_dir):
             for filename in files:
                 if filename.startswith('~') or not filename.endswith('.xlsx'):
                     continue
                 excel_name = os.path.splitext(filename)[0]
-                if black_list and excel_name in black_list:
+                if denylist and excel_name in denylist:
+                    continue
+                if allowlist and excel_name not in allowlist:
                     continue
                 excel_path = os.path.join(excel_dir, filename)
                 metalist.update(excel_name, excel_path)
                 if is_force or metalist.isdiff(excel_name):
                     self._lookup_dict[excel_name] = []  # 这张表需要导出，记录具体导出了哪些sheet。
-                    self._make_book(excel_name, excel_path, list_error)
+                    self._make_book(excel_name, excel_path, self._errordumpable)
                 else:
                     self._lookup_dict[excel_name] = _Fmt.NO_DIFF_FLAG  # 整张表没有变更
         sheet_nums = self._editor.edit_end(self._lookup_dict, is_force)
         metalist.save(VERSION)
-        self._dump_build_logs(list_warn, list_error)
-        log.i('导表结束 (数量:%d, 耗时:%.2fs)' % (sheet_nums, time.time() - start_t))
+        self._dump_build_logs()
+        log.i('export excel done, duration:%.2fs, sheet count:%d' % (time.time() - start_t, sheet_nums))
         if self._excel_errors:
             self.exit_on_error()
 
-    def _dump_build_logs(self, list_warn, list_error):
+    def _dump_build_logs(self):
         # 打印警告
-        if list_warn and self._excel_warns:
+        if self._warndumpable and self._excel_warns:
             num = 0
             for excel_name, warn_dict in self._excel_warns.items():
                 for sheet_name, warn_list in warn_dict.items():
                     num += 1
                     log.w(num, excel_name, sheet_name, warn_list)
         # 打印错误
-        if list_error and self._excel_errors:
+        if self._errordumpable and self._excel_errors:
             for excel_name, error_dict in self._excel_errors.items():
                 log.e('======================================== excel:', excel_name)
                 for sheet_name, err_list in error_dict.items():
@@ -276,7 +283,7 @@ class SheetBuilder:
             if not k:
                 continue
             if k in header.keys:
-                sheet_errs.append('字段重名：' + k)
+                sheet_errs.append('duplicate field:' + k)
                 continue
             if 'string' == t and self._is_json_col(sheet, c, sheet_area):
                 t = 'json'  # 自动检查json格式
@@ -287,22 +294,22 @@ class SheetBuilder:
 
     def _look_sheet(self, sheet, sheet_errs):
         if sheet.nrows < 1 or sheet.ncols < 1:
-            sheet_errs.append('空表')
+            sheet_errs.append('empty sheet')
             return
         top, left = self._find_sheet_origin(sheet)
         if -1 == top or -1 == left:
-            sheet_errs.append('未找到"%s"标识' % _Fmt._TAG_CLIENT)
+            sheet_errs.append('can not found %s' % _Fmt._TAG_CLIENT)
             return
         if not _Fmt.is_server_tag(sheet.cell_value(top + 3, left)):
-            sheet_errs.append('未找到"%s"标识' % _Fmt._TAG_SERVER)
+            sheet_errs.append('can not found %s' % _Fmt._TAG_SERVER)
             return
         row_num = sheet.nrows - top
         if (row_num < 5) or (sheet.ncols - left < 2):
-            sheet_errs.append('表格式不完整')
+            sheet_errs.append('the sheet is not complete')
             return
         lines = self._find_sheet_end(sheet, top + 4, left)
         if (5 == lines - top) and (row_num > 5):
-            sheet_errs.append('表已废弃')
+            sheet_errs.append('the sheet is deprecated')
             return
         return _SheetArea(top, left, lines)
 
@@ -394,8 +401,8 @@ class _Lua2:
 
 class _ULOEditor:
 
-    def __init__(self, force_one):
-        self._force_one = force_one
+    def __init__(self, forceone=False):
+        self._force_one = forceone
         self._json_type = {'nil': 0, 'string': 1, 'int': 2, 'float': 3, 'bool': 4, 'list': 5, 'dict': 6, 'long': 7}
         self._ulo_type = {'int': 1, 'string': 2, 'float': 3, 'json': 4, 'long': 5}
 
@@ -404,11 +411,11 @@ class _ULOEditor:
         self._new_dict = {}
         if self._force_one:
             if not os.path.isfile(out_path):
-                log.d('历史导出的数据丢失，需要全部重新导出:', out_path)
+                log.d('history exported data lost, need to be re-exported:', out_path)
                 return True
         else:
             if not os.path.isdir(out_path):
-                log.d('历史导出的数据丢失，需要全部重新导出:', out_path)
+                log.d('history exported data lost, need to be re-exported:', out_path)
                 return True
         return is_force
 
@@ -468,7 +475,7 @@ class _ULOEditor:
         for name in os.listdir(self._ulo_path):
             ulofile = os.path.join(self._ulo_path, name)
             if FS.filename(name) not in build_look_map:
-                log.w('删除表文件:', ulofile)
+                log.w('delete ulo:', ulofile)
                 os.remove(ulofile)
             else:
                 with open(ulofile, 'rb') as fp:
@@ -546,7 +553,7 @@ class _ULOEditor:
             if value:
                 json_obj = _Fmt.decode_json(value)
                 if json_obj is None:
-                    raise _CellError(value, 'json解析错误')
+                    raise _CellError(value, 'json error')
                 else:
                     self._write_json(ba, json_obj)
             else:
@@ -575,7 +582,7 @@ class _ULOEditor:
         elif isinstance(data, list):
             a_len = len(data)
             if a_len > 255:
-                raise _CellError(data, 'json数组元素不可超过256个')
+                raise _CellError(data, 'json list elements must no more than 256')
             ba.write_u8(self._json_type['list'])
             ba.write_u8(a_len)
             for i in range(a_len):
@@ -583,7 +590,7 @@ class _ULOEditor:
         elif isinstance(data, dict):
             d_len = len(data)
             if d_len > 255:
-                raise _CellError(data, 'json字典元素不可超过256个')
+                raise _CellError(data, 'json dict elements must no more than 256')
             ba.write_u8(self._json_type['dict'])
             ba.write_u8(d_len)
             for k, v in data.items():
@@ -592,12 +599,12 @@ class _ULOEditor:
                     if k:
                         self._write_json(ba, k)
                     else:
-                        raise _CellError(data, 'json键值必须非空')
+                        raise _CellError(data, 'json key must not be none')
                 else:
                     self._write_json(ba, i)
                 self._write_json(ba, v)  # write dict value
         else:
-            raise _CellError(data, '未知json数据格式')
+            raise _CellError(data, 'unknow json value type:' + data)
 
     @staticmethod
     def _write_string(ba, s):
@@ -611,7 +618,7 @@ class _LUAEditor:
     def edit_begin(self, out_path, is_force):
         self._out_root = out_path
         if not os.path.isdir(out_path):
-            log.d('历史输出文件夹丢失，需要全部重新导出。', out_path)
+            log.d('history exported data lost, need to be re-exported:', out_path)
             return True
         return is_force
 
@@ -630,7 +637,7 @@ class _LUAEditor:
                 removed = True
             if removed:
                 luafile = os.path.join(self._out_root, tag)
-                log.w('删除表文件:', luafile)
+                log.w('delete lua:', luafile)
                 os.remove(luafile)
                 lualist.pop(i)
         FS.rm_empty_dirs(self._out_root)
@@ -738,7 +745,7 @@ class _LUAEditor:
             if value:
                 json_obj = _Fmt.decode_json(value)
                 if json_obj is None:
-                    raise _CellError(value, 'json解析错误')
+                    raise _CellError(value, 'json error')
                 else:
                     p_v = self._mk_json(json_obj)
             else:
@@ -767,7 +774,7 @@ class _LUAEditor:
                 lua_str += '=' + self._mk_json(v) + ','
             return '{' + lua_str[0:-1] + '}'
         else:
-            raise _CellError(data, '未知json数据格式')
+            raise _CellError(data, 'unknow json value type:' + data)
 
 class _TXTEditor:
     def __init__(self, txt_dir):

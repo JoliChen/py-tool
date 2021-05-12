@@ -6,6 +6,9 @@ import json
 import os
 import shutil
 import zlib
+import time
+import math
+import random
 
 import openpyxl
 import demjson
@@ -664,30 +667,73 @@ def test_hack_h5():
     # deh5 = RobH5.DeDMXKL()
     # deh5.de_json()
     # print('done')
+    pass
 
-    # assets = '/Users/joli/Downloads/xian_M205161_OfficialAd_LtshareSocial/assets'
-    # for par, _, files in os.walk(assets):
-    #     for fn in files:
-    #         ff = os.path.join(par, fn)
-    #         with open(ff, 'rb') as fp:
-    #             buf = fp.read()
-    #         if buf and buf[12:19] == b'UnityFS':
-    #             print('write:', ff)
-    #             with open(ff, 'wb') as fp:
-    #                 fp.write(buf[12:])
+def extract_text():
+    # ff = '/Users/joli/Downloads/xxx/npc_talk.json'
+    # ff = '/Users/joli/Downloads/xxx/npc_menu.json'
+    # ff = '/Users/joli/Downloads/xxx/npc_story.json'
+    ff = '/Users/joli/Downloads/xxx/npc.json'
+    with open(ff, 'rb') as fp:
+        sheet = json.load(fp)
+        with open(ff.replace('.json', '.txt'), 'w') as fp1:
+            for obj in sheet:
+                pass
+                # fp1.write(obj['content'] + '\n')
 
-    ass = '/Users/joli/Downloads/Hack/Tale.of.Immortal.Early.Access/guigubahuang_Data/sharedassets0.assets'
-    as1 = '/Users/joli/Downloads/Hack/Tale.of.Immortal.Early.Access/guigubahuang_Data/sharedassets0.assets1'
-    with open(ass, 'rb') as fp:
-        buf = fp.read()
-        buf = buf[20:]
-        buf = b'UnityFS' + bytes([0, 0, 0, 0, 0x06, 0x35, 0x2E, 0x78, 0x2E, 0x78, 0]) + buf
-    with open(as1, 'wb') as fp:
-        fp.write(buf)
+                # fp1.write(obj['text'] + '\n')
+                # if 'follow' in obj:
+                #     for follow in obj['follow']:
+                #         fp1.write(follow[1] + '\n')
+                # for v in obj['dbase'].values():
+                #     fp1.write(v + '\n')
+
+                # obj = sheet[obj]
+                # if 'story_fragment' in obj:
+                #     fp1.write(obj['story_fragment'] + '\n')
+
+                # obj = sheet[obj]
+                # if 'desc' in obj:
+                #     fp1.write(obj['desc'] + '\n')
+                # for v in obj['dialog']:
+                #     fp1.write(v + '\n')
+
+def click_spine_forum():
+    url = 'http://zh.esotericsoftware.com/forum/P40-15632'
+    http_sess = requests.session()
+    http_sess.keep_alive = False
+    for i in range(99999999999):
+        secs = random.randint(1, 10)
+        print(f'start request:{i}, wait:{secs}')
+        try:
+            # time.sleep(secs)
+            response = http_sess.get(url)
+            if response.status_code == 200:
+                print(f'request:{i} successful')
+                # print(response.content)
+            response.close()
+        except:
+            pass
+    http_sess.close()
+
+def test_ab():
+    ab_dir = '/Users/joli/Downloads/lingmaochuan_123/assets'
+    # ab_dir = '/Users/joli/Downloads/xian_M205161_OfficialAd_LtshareSocial/assets'
+    for par, _, files in os.walk(ab_dir):
+        for fn in files:
+            ff = os.path.join(par, fn)
+            with open(ff, 'rb') as fp:
+                buf = fp.read()
+            if buf and buf[8:15] == b'UnityFS':
+                print('write:', ff)
+                with open(ff, 'wb') as fp:
+                    fp.write(buf[8:])
+
 
 def main():
     pass
-    test_hack_h5()
+    test_ab()
+    # test_hack_h5()
     # test_json2excel()
     # test_load_cdn_files()
     # test_hack_xor()
