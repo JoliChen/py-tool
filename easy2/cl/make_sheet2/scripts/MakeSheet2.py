@@ -209,13 +209,18 @@ class SheetBuilder:
                 if filename.startswith('~') or not filename.endswith('.xlsx'):
                     continue
                 excel_name = os.path.splitext(filename)[0]
-                if denylist and excel_name in denylist:
-                    continue
-                if allowlist and excel_name not in allowlist:
-                    continue
+                if allowlist:
+                    if excel_name not in allowlist:
+                        metalist.keep(excel_name)
+                        self._lookup_dict[excel_name] = _Fmt.NO_DIFF_FLAG  # 整张表没有变更
+                        continue
+                elif denylist:
+                    if excel_name in denylist:
+                        metalist.keep(excel_name)
+                        self._lookup_dict[excel_name] = _Fmt.NO_DIFF_FLAG  # 整张表没有变更
+                        continue
                 excel_path = os.path.join(excel_dir, filename)
-                metalist.update(excel_name, excel_path)
-                if is_force or metalist.isdiff(excel_name):
+                if metalist.diff(excel_name, excel_path, is_force):
                     self._lookup_dict[excel_name] = []  # 这张表需要导出，记录具体导出了哪些sheet。
                     self._make_book(excel_name, excel_path, self._errordumpable)
                 else:
@@ -819,13 +824,22 @@ class FileMetaList:
         if self._hide:
             FS.set_file_visible(self._path, False)
 
-    def update(self, key, filepath):
-        meta = os.stat(filepath)
-        self._new_map['manifest'][key] = math.floor(meta.st_mtime * 1000)  # FS.md5(filepath)
+    def keep(self, key):
+        old_manifest = self._old_map.get('manifest')
+        old_mt = old_manifest.get(key) if old_manifest else None
+        if old_mt:
+            self._new_map['manifest'][key] = old_mt
 
-    def isdiff(self, key):  # 对比元数据是否不同
-        old = self._old_map.get('manifest')
-        return (not old) or old.get(key) != self._new_map['manifest'].get(key)
+    def diff(self, key, filepath, force):  # 对比元数据是否不同
+        st = os.stat(filepath)
+        new_mt = math.floor(st.st_mtime * 1000)  # FS.md5(filepath)
+        self._new_map['manifest'][key] = new_mt
+        if force:
+            return True
+        else:
+            old_manifest = self._old_map.get('manifest')
+            old_mt = old_manifest.get(key) if old_manifest else None
+            return old_mt != new_mt if old_mt else True
 
     def isupgrade(self, version):  # 是否程序已升级
         return self._old_map.get('version') != version
