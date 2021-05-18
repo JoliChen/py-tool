@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 
-from jonlin.utils import FS, Collect, Log
+from jonlin.utils import FS, Collect, Log, Bit
 
 log = Log.Logger(__file__)
 
@@ -231,29 +231,49 @@ def test_check_images():
 
 # 检查特效图是否重名
 def test_check_flashx():
-    import biplist
-    flashx_dir = '/Users/joli/Work/LightPro/Client/dazhanguo/res/dest'
-    itemname_map = {}
-    bad_name_map = {}
-    for (parent, _, files) in os.walk(flashx_dir):
-        for name in files:
-            if name.endswith('.plist'):
-                fn = os.path.join(parent, name)
-                plist = biplist.readPlist(fn)
-                for k in plist['frames']:
-                    if k in itemname_map:
-                        array = bad_name_map.get(k)
-                        if not array:
-                            array = []
-                            bad_name_map[k] = array
-                            array.append(itemname_map[k])
-                        array.append(fn)
-                    else:
-                        itemname_map[k] = fn
-    for k, v in bad_name_map.items():
-        print('-----------', k)
-        print('\n'.join(v))
-    print('done')
+    # import biplist
+    # flashx_dir = '/Users/joli/Work/LightPro/Client/dazhanguo/res/dest'
+    # itemname_map = {}
+    # bad_name_map = {}
+    # for (parent, _, files) in os.walk(flashx_dir):
+    #     for name in files:
+    #         if name.endswith('.plist'):
+    #             fn = os.path.join(parent, name)
+    #             plist = biplist.readPlist(fn)
+    #             for k in plist['frames']:
+    #                 if k in itemname_map:
+    #                     array = bad_name_map.get(k)
+    #                     if not array:
+    #                         array = []
+    #                         bad_name_map[k] = array
+    #                         array.append(itemname_map[k])
+    #                     array.append(fn)
+    #                 else:
+    #                     itemname_map[k] = fn
+    # for k, v in bad_name_map.items():
+    #     print('-----------', k)
+    #     print('\n'.join(v))
+    # print('done')
+
+    fxdir = '/Users/joli/Work/CS/C/xiuxian_new/dazhanguo/res/dest'
+    fbf = os.path.join(fxdir, 'SheetPackage.fbf')
+    with open(fbf, 'rb') as fp:
+        ba = Bit.ByteArray()
+        ba.init_buffer(fp.read())
+        count = ba.read_u32()
+        for i in range(count):
+            sheetid = ba.read_u32()
+            if sheetid == 2555296662:
+                print(sheetid)
+            ba.read_float()
+            n = ba.read_short()
+            for j in range(n):
+                ba.read_byte()
+                ba.read_float()
+                ba.read_float()
+        print(ba.get_available())
+        print(count)
+
 
 def main():
     # test_lupa()

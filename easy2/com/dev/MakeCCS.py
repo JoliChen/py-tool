@@ -151,6 +151,7 @@ class BVM:  # Bundle Version Manager
         'csb': ('src/csb/', ),
     }
     SCRIPT_PKG_SUFFIX = '.pak'
+    ENCRYPT_FILETYPES = ('.plist', '.ulo')
 
     def __init__(self, bvmdir):
         self.bvmdir = os.path.abspath(bvmdir)
@@ -301,11 +302,17 @@ class BVM:  # Bundle Version Manager
                 usefiles.append(fid)
         return usefiles
 
+    def _need_encrypt(self, fid):
+        for ext in self.ENCRYPT_FILETYPES:
+            if fid.endswith(ext):
+                return True
+        return False
+
     def _gen_resfile(self, fid, outdir):
         Log.i('gen res', fid)
         fsrc = os.path.join(self._projdir, fid)
         fdst = os.path.join(outdir, fid)
-        if fid.endswith('.plist'):
+        if self._need_encrypt(fid):
             self._encrypt_file(fsrc, fdst)
             curinfo = self._curnote['files'][fid]  # type: dict
             curinfo['encrypt'] = self._gen_fileinfo(fdst, curinfo[self.kMinor])  # 记录plist加密
@@ -316,13 +323,13 @@ class BVM:  # Bundle Version Manager
     def _encrypt_file(self, src, dst):
         with open(src, 'rb') as sfp:
             data = sfp.read()
-            n = len(data)
-            data += bytes((4 - n % 4) & 3) + bytes([n & 0xFF, n >> 8 & 0xFF, n >> 16 & 0xFF, n >> 24 & 0xFF])
-            data = xxtea.encrypt(data, self._tea, padding=False)
-            data = self.TEA_SIG + data
-            FileKit.make_parentdir(dst)
-            with open(dst, 'wb') as dfp:
-                dfp.write(data)
+        n = len(data)
+        data += bytes((4 - n % 4) & 3) + bytes([n & 0xFF, n >> 8 & 0xFF, n >> 16 & 0xFF, n >> 24 & 0xFF])
+        data = xxtea.encrypt(data, self._tea, padding=False)
+        data = self.TEA_SIG + data
+        FileKit.make_parentdir(dst)
+        with open(dst, 'wb') as dfp:
+            dfp.write(data)
 
     def _gen_scripts(self, luafiles, dirtymap, outdir, tmpdir):
         packages = []
