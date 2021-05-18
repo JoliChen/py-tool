@@ -8,6 +8,8 @@ import re
 import shutil
 import time
 import random
+
+from jonlin.algorithms import Hash
 from jonlin.utils import Log, FS, Bit, Math, Rand, Crypto
 
 log = Log.Logger(__file__)
@@ -344,7 +346,7 @@ class AssetBuilder:
         return header
 
     def _add_file(self, tag, path):
-        hashcode = Math.hash_bkdr(tag, self._hseed)
+        hashcode = Hash.bkdr(tag, self._hseed)
         log.i('pack file:', hashcode, tag)
         assert self._hashmap.get(hashcode) is None, 'file hashcode conflict:' + path
         with open(path, 'rb') as fp:
@@ -441,7 +443,7 @@ class AssetPackage:
         return buf
 
     def find(self, tag):
-        tag = Math.hash_bkdr(tag, self._hseed)
+        tag = Hash.bkdr(tag, self._hseed)
         return self._hashmap.get(tag)
 
     def load(self, tag):
@@ -453,7 +455,7 @@ class AssetPackage:
         start_t = time.time()
         filenum, filemap = 0, {}
         for tag in FS.walk_files(refer, cut=len(refer) + 1):
-            filemap[Math.hash_bkdr(tag, self._hseed)] = tag
+            filemap[Hash.bkdr(tag, self._hseed)] = tag
         for hashcode in self._hashmap:
             if hashcode not in filemap:
                 continue

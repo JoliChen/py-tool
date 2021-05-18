@@ -23,7 +23,8 @@ def crc32_datasum(data):
         crc32_init(CRC32_TABLE, 0x04C10DB7)
     accum = 0
     for i in range(len(data)):
-        accum = (accum << 8) ^ CRC32_TABLE[(accum >> 24) ^ data[i]]
+        i = ((accum >> 24) ^ data[i]) & 0xFF
+        accum = ((accum << 8) ^ CRC32_TABLE[i]) & 0xFFFFFFFF
     return accum
 
 def crc32_filesum(path):

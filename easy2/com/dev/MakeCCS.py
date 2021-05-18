@@ -39,6 +39,13 @@ class FileKit:
             return h.hexdigest()
 
     @staticmethod
+    def get_strhash(chars, seed=131):
+        h = 0
+        for c in chars:
+            h = (h * seed + ord(c)) & 0xFFFFFFFF
+        return h
+
+    @staticmethod
     def make_parentdir(filepath):
         pardir = os.path.dirname(filepath)
         if not os.path.isdir(pardir):
@@ -226,9 +233,8 @@ class BVM:  # Bundle Version Manager
             for fn in files:
                 fp = os.path.join(sudir, fn)
                 fid = FileKit.normposix(fp[idslice:])
-                if not self._check_fileid(fid):
-                    continue
-                curfiles[fid] = self._fast_gen_fileinfo(fp, prefiles.get(fid))
+                if self._check_fileid(fid):
+                    curfiles[fid] = self._fast_gen_fileinfo(fp, prefiles.get(fid))
 
     def _check_fileid(self, fid):
         assert not self.RE_ILLEGAL_PATH.search(fid), 'illegal identifier=' + fid
@@ -247,19 +253,28 @@ class BVM:  # Bundle Version Manager
         else:
             sign = FileKit.get_filemd5(filepath)
             if sign == preinfo['sign']:
-                curinfo = preinfo
+                curinfo = self._compatible_fileinfo(preinfo)
             else:
                 curinfo = self._gen_fileinfo(filepath, self._curminor, mt, sign)
         return curinfo
 
     def _gen_fileinfo(self, filepath, minor, meta=None, sign=None):
         Log.i("put file:", filepath)
+        sign = sign or FileKit.get_filemd5(filepath)
         info = meta or self._gen_filemeta(filepath)
-        info['sign'] = sign or FileKit.get_filemd5(filepath)
+        info['sign'] = sign
+        info['hash'] = FileKit.get_strhash(sign)
         info[self.kMinor] = minor
         # info['package'] = 'xxx.pak'
         # info['encrypt'] = {encrypt file info}
         # info['sub'] = 0 or 1
+        return info
+
+    def _compatible_fileinfo(self, info):
+        if 'hash' not in info:
+            info['hash'] = FileKit.get_strhash(info['sign'])
+        if 'encrypt' in info:
+            info['encrypt'] = self._compatible_fileinfo(info['encrypt'])
         return info
 
     @staticmethod
@@ -353,7 +368,7 @@ class BVM:  # Bundle Version Manager
                 self._encrypt_file(archive, pkgpath)
                 curinfo = self._gen_fileinfo(pkgpath, self._curminor)  # 记录脚本加密包信息
             else:
-                curinfo = self._prenote['files'][pkgname]  # 从前一次打包日志里取包信息
+                curinfo = self._compatible_fileinfo(self._prenote['files'][pkgname])  # 从前一次打包日志里取包信息
             if curinfo:
                 curfiles[pkgname] = curinfo
                 packages.append(pkgname)
@@ -379,13 +394,13 @@ class BVM:  # Bundle Version Manager
 
     def _gen_manifest(self, outdir):
         Log.i('保存文件清单 BEGIN')
-        rows, rfmt = [], '["%s"]={v=%d,size=%d},'
+        rows, rfmt = [], '["%s"]={v=%d,h=%d,size=%d},'
         for fid, curinfo in self._curnote['files'].items():
             if 'encrypt' in curinfo:
                 curinfo = curinfo['encrypt']  # 使用加密文件信息
             if 'package' in curinfo:
                 continue  # 被打包的文件直接用包信息
-            rows.append(rfmt % (fid, curinfo[self.kMinor], curinfo['size']))
+            rows.append(rfmt % (fid, curinfo[self.kMinor], curinfo['hash'], curinfo['size']))
         if rows:
             rows[-1] = rows[-1][:-1]
             fstr = '\n'.join(rows)
