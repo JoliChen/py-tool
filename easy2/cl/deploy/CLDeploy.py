@@ -8,11 +8,14 @@ from scripts import SSHUtil, XLSUtil
 
 def do_test():
     # import os
+    # sshconf = {'host': '10.16.101.68', 'port': 61620, 'username': 'uzone', 'password': 'uzone123', 'policy': 'auto'}
+    # sshconf = {'host': '10.16.101.68', 'port': 61620, 'username': 'root', 'key': '/Users/joli/.ssh/id_rsa', 'policy': 'auto'}
     # SSHUtil.upload(
-    #     {'host': '10.16.101.68', 'port': 61620, 'username': 'uzone', 'password': 'uzone123'},
+    #     sshconf,
     #     localdir='/Users/joli/Work/CS/C/xiuxian_new/docs/server_config',
     #     remotedir='/data/uzone_xiuxiannew_c9300/resources/config2',
     #     allowlist=[])
+    # SSHUtil.run(sshconf, 'ls -l')
 
     # projdir = '/Users/joli/Work/CS/C/xiuxian_new'
     # xlsxdir = os.path.join(projdir, 'docs/config')
@@ -22,11 +25,19 @@ def do_test():
     pass
 
 def do_ssh(opts, args):
-    if opts.upload:
+    sshconf = {
+        'host': opts.host,
+        'port': opts.port,
+        'username': opts.username,
+        'password': opts.password,
+        'key': opts.key,
+        'policy': opts.policy
+    }
+    if opts.run:
+        SSHUtil.run(sshconf, opts.command)
+    elif opts.upload:
         allowlist = opts.allowlist.split(',') if opts.allowlist else None
-        SSHUtil.upload(
-            {'host': opts.host, 'port': opts.port, 'username': opts.username, 'password': opts.password},
-            opts.localdir, opts.remotedir, allowlist)
+        SSHUtil.upload(sshconf, opts.localdir, opts.remotedir, allowlist)
     else:
         pass
 
@@ -40,16 +51,23 @@ def do_excel(opts, args):
 
 def main():
     op = optparse.OptionParser(description='部署辅助工具')
-    op.add_option('--do', dest='do', help='任务类型:[ssh、excel]')
+    op.add_option('--do', dest='do', help='任务类型[ssh、excel]')
 
-    ssh_ini = (
-        optparse.Option('--host', dest='host', help='主机IP'),
-        optparse.Option('--port', dest='port', type='int', help='主机端口'),
-        optparse.Option('--username', dest='username', help='用户名称'),
-        optparse.Option('--password', dest='password', help='登录密码')
-    )
+    og_ssh_login = optparse.OptionGroup(op, 'SSH登录配置')
+    og_ssh_login.add_option('--host', dest='host', help='主机IP'),
+    og_ssh_login.add_option('--port', dest='port', type='int', help='主机端口'),
+    og_ssh_login.add_option('--username', dest='username', help='用户名称'),
+    og_ssh_login.add_option('--password', dest='password', help='登录密码'),
+    og_ssh_login.add_option('--key', dest='key', help='用户秘钥(id_rsa)'),
+    og_ssh_login.add_option('--policy', dest='policy', default='auto', help='登录策略[auto, reject, warnning]')
+    op.add_option_group(og_ssh_login)
+
+    og_ssh_run = optparse.OptionGroup(op, 'SSH远程命令')
+    og_ssh_run.add_option('--run', action="store_true", help='ssh远程命令')
+    og_ssh_run.add_option('--command', dest='localdir', help='本地目录')
+    op.add_option_group(og_ssh_run)
+
     og_ssh_upload = optparse.OptionGroup(op, 'SSH上传文件')
-    og_ssh_upload.add_options(ssh_ini)
     og_ssh_upload.add_option('--upload', action="store_true", help='ssh上传')
     og_ssh_upload.add_option('--localdir', dest='localdir', help='本地目录')
     og_ssh_upload.add_option('--remotedir', dest='remotedir', help='远程目录')
@@ -57,7 +75,7 @@ def main():
     op.add_option_group(og_ssh_upload)
 
     og_excel = optparse.OptionGroup(op, 'excel操作')
-    og_excel.add_option('--action', dest='action', help='excel操作:[read, write]')
+    og_excel.add_option('--action', dest='action', help='excel操作[read, write]')
     og_excel.add_option('--xlsxdir', dest='xlsxdir', help='xlsx文件目录')
     og_excel.add_option('--jsondir', dest='jsondir', help='json文件目录')
     og_excel.add_option('--wballows', dest='wballows', help='excel白名单')

@@ -685,24 +685,33 @@ def simple_modify_text(csd_dir):
             if not name.endswith('.csd'):
                 continue
             f = os.path.join(par, name)
-            # f = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb/Login/fenbao.csd'
-            print(f)
+            # f = '/Users/joli/Work/CS/C/xiuxian_new/CocosProject/cocosstudio/csb/battle/tips_shentong.csd'
+            # print(f)
             buffer = maker.modify_dom_text(f, *[
+                # {
+                #     'old_color': {'a': 255, 'r': 228, 'g': 228, 'b': 231},
+                #     'new_color': {'a': 255, 'r': 255, 'g': 0, 'b': 0},
+                # },
+                # {
+                #     'old_color': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
+                #     'new_color': {'a': 255, 'r': 249, 'g': 249, 'b': 249},
+                # },
+                # {
+                #     'old_color': {'a': 255, 'r': 249, 'g': 240, 'b': 220},
+                #     'new_color': {'a': 255, 'r': 32, 'g': 30, 'b': 56},
+                # },
+                # {
+                #     'old_color': {'a': 255, 'r': 0x4A, 'g': 0x2E, 'b': 0x07},
+                #     'new_color': {'a': 255, 'r': 0x23, 'g': 0x50, 'b': 0x5B},
+                # },
                 {
-                    'old_color': {'a': 255, 'r': 228, 'g': 228, 'b': 231},
-                    'new_color': {'a': 255, 'r': 255, 'g': 0, 'b': 0},
-                },
-                {
-                    'old_color': {'a': 255, 'r': 74, 'g': 46, 'b': 7},
-                    'new_color': {'a': 255, 'r': 249, 'g': 249, 'b': 249},
-                },
-                {
-                    'old_color': {'a': 255, 'r': 249, 'g': 240, 'b': 220},
-                    'new_color': {'a': 255, 'r': 32, 'g': 30, 'b': 56},
-                },
+                    'old_color': {'a': 255, 'r': 0x53, 'g': 0x42, 'b': 0x2E},
+                    'new_color': {'a': 255, 'r': 0x23, 'g': 0x50, 'b': 0x5B},
+                }
             ])
             if not buffer:
                 continue
+            print('write', f)
             with open(f, 'wb') as fp:
                 fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
 
@@ -732,8 +741,9 @@ def simple_modify_fontsize(csd_dir):
                 fp.write(buffer[38:])  # 去除<?xml version="1.0" encoding="utf-8"?>
 
 def main():
-    csd_dir = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb'
-    simple_modify_button(csd_dir)
+    # csd_dir = '/Users/joli/Work/CS/C/xiyou/CocosProject/cocosstudio/csb'
+    csd_dir = '/Users/joli/Work/CS/C/xiuxian_new/CocosProject/cocosstudio/csb'
+    # simple_modify_button(csd_dir)
     simple_modify_text(csd_dir)
 
     # simple_modify_font(csd_dir)

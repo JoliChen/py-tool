@@ -58,12 +58,14 @@ def sftp_cleardir(sftp: SFTPClient, rootdir):
         except Exception as e:
             print("sftp remove:%s, error:%s" % (fp, e))
 
-def upload(conf, localdir, remotedir, allowlist: list):
-    print('%s upload file start' % datetime.datetime.now())
+def upload(sshconf, localdir, remotedir, allowlist: list):
+    print('%s upload: %s -> %s' % (datetime.datetime.now(), localdir, remotedir))
     relatpos = len(localdir) + 1
-    pt = paramiko.Transport((conf['host'], conf['port']))
+    pt = None
     try:
-        pt.connect(username=conf['username'], password=conf['password'])
+        sock = (sshconf['host'], sshconf['port'])
+        pt = paramiko.Transport(sock)
+        pt.connect(username=sshconf['username'], password=sshconf['password'])
         sftp = SFTPClient.from_transport(pt)
         sftp_mkdir(sftp, remotedir)
         if not allowlist:
@@ -94,5 +96,25 @@ def upload(conf, localdir, remotedir, allowlist: list):
     except Exception as e:
         print(e)
     finally:
-        pt.close()
+        if pt:
+            pt.close()
     print('%s upload file done' % datetime.datetime.now())
+
+# 执行远程命令 commands用;隔开
+def run(sshconf, commands):
+    print('%s run command: %s' % (datetime.datetime.now(), commands))
+    pc = paramiko.SSHClient()
+    if sshconf.get('policy') == 'auto':
+        pc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    key_file = sshconf.get('key')
+    if key_file:
+        private_key = paramiko.RSAKey.from_private_key_file(key_file)
+        pc.load_system_host_keys()
+        pc.connect(sshconf['host'], sshconf['port'], sshconf['username'], pkey=private_key)
+    else:
+        pc.connect(sshconf['host'], sshconf['port'], sshconf['username'], sshconf['password'])
+    stdin, stdout, stderr = pc.exec_command(commands)
+    results = stdout.read(), stderr.read()
+    for line in results:
+        print(line)
+    print('%s run command done' % datetime.datetime.now())
