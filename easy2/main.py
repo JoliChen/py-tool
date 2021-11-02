@@ -45,9 +45,14 @@ class CmdMake:
         MakeCSD.main()
 
     @staticmethod
-    def make_ccs():
-        from com.dev import MakeCCS
-        MakeCCS.main()
+    def make_ver():
+        from com.dev import MakeVer
+        MakeVer.main()
+
+    @staticmethod
+    def make_ver_compat():
+        from com.dev import MakeVerCompat
+        MakeVerCompat.main()
 
     def make_lua(self):
         from com.dev.MakeScript import LuacBuilder

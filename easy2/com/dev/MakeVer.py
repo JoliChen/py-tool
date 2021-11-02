@@ -39,13 +39,6 @@ class FileKit:
             return h.hexdigest()
 
     @staticmethod
-    def get_strhash(chars, seed=131):
-        h = 0
-        for c in chars:
-            h = (h * seed + ord(c)) & 0xFFFFFFFF
-        return h
-
-    @staticmethod
     def make_parentdir(filepath):
         pardir = os.path.dirname(filepath)
         if not os.path.isdir(pardir):
@@ -99,11 +92,18 @@ class BinKit:
         return ','.join(dst)
 
     @staticmethod
-    def hash_bkdr(text, seed=131):  # BKDRHash [31 131 1313 13131 131313]
+    def hash_bkdr(chars, seed=131):  # BKDRHash [31 131 1313 13131 131313]
         h = 0
-        for s in text:
-            h = h * seed + ord(s)
+        for c in chars:
+            h = h * seed + ord(c)
         return h & 0xFFFFFFFF
+
+    @staticmethod
+    def hash_bkdr2(chars, seed=131):
+        h = 0
+        for c in chars:
+            h = (h * seed + ord(c)) & 0xFFFFFFFF
+        return h
 
 class SvnClient:
     def __init__(self, commandline='svn'):
@@ -113,10 +113,10 @@ class SvnClient:
         cmd = '%s info "%s"' % (self.cl, localdir)
         with os.popen(cmd) as fp:
             for s in fp.readlines():
-                if s.find('Revision:')==0 or s.find('版本:')==0:
-                    rev = re.findall(r'\d+', s)
-                    if rev:
-                        return int(rev[0])
+                if s.find('Revision:') == 0 or s.find('版本:') == 0:
+                    reversions = re.findall(r'\d+', s)
+                    if reversions:
+                        return int(reversions[0])
 
 class BVM:  # Bundle Version Manager
     TEA_KEY = b'$yz#z0X78'  # xxtea秘钥
@@ -263,7 +263,7 @@ class BVM:  # Bundle Version Manager
         sign = sign or FileKit.get_filemd5(filepath)
         info = meta or self._gen_filemeta(filepath)
         info['sign'] = sign
-        info['hash'] = FileKit.get_strhash(sign)
+        info['hash'] = BinKit.hash_bkdr2(sign)
         info[self.kMinor] = minor
         # info['package'] = 'xxx.pak'
         # info['encrypt'] = {encrypt file info}
@@ -272,7 +272,7 @@ class BVM:  # Bundle Version Manager
 
     def _compatible_fileinfo(self, info):
         if 'hash' not in info:
-            info['hash'] = FileKit.get_strhash(info['sign'])
+            info['hash'] = BinKit.hash_bkdr2(info['sign'])
         if 'encrypt' in info:
             info['encrypt'] = self._compatible_fileinfo(info['encrypt'])
         return info
@@ -430,7 +430,7 @@ class BVM:  # Bundle Version Manager
                 size += meta.st_size
         print('本次热更新%f(MB)' % (size / 1024 / 1024))
 
-    def build(self, projdir, version, mode, subfiles=None):
+    def produce(self, projdir, version, mode, subfiles=None):
         self._projdir = projdir
         self._curminor = version[1]  # 0-major 1-minor
         self._prenote = self.load_prenote(mode, version)
@@ -452,7 +452,7 @@ class BVM:  # Bundle Version Manager
 
 class CocosProject:
     def __init__(self, projdir):
-        self.projdir = projdir
+        self.projdir  = projdir
         self.shelldir = os.path.join(projdir, 'make')
         self.toolsdir = os.path.join(projdir, 'tools')
         self.builddir = os.path.join(projdir, 'build')
@@ -596,13 +596,13 @@ class CocosBuilder(CocosProject):
     # @param major  程序版本
     # @param minor  资源版本
     # @param mode   [hotfix, bundle]
-    def make_bundle(self, major, minor=0, mode=BVM.kHOTFIX):
+    def build(self, major, minor=0, mode=BVM.kHOTFIX):
         t = time.time()
         if 0 == minor:
             minor = self.svnclient.get_revision(self.ccsrtdir)
         version = (major, minor)
         bvm = BVM(os.path.join(self.builddir, 'bvm'))
-        bvm.build(self.ccsrtdir, version, mode)
+        bvm.produce(self.ccsrtdir, version, mode)
         print('done %smin' % round((time.time()-t) / 60, 3))
 
 def unicode2hex(unicode):
@@ -614,9 +614,10 @@ def main():
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz_bt')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
-    builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new')
-    # builder.make_client_sheet()
-    builder.make_bundle(16774, mode=BVM.kBUNDLE)
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new_develop')
+    builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new_release')
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/hotfix_tmp')
+    builder.build(16774, mode=BVM.kHOTFIX)
 
     from jonlin.utils import FS
     FS.explorer(builder.builddir)
