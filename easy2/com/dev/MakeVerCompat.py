@@ -438,7 +438,7 @@ class UloProject(BaseProject):
                 self.merge_config(dstdir)  # 合并旧版本配置表
             has_modified = True
         if not has_modified:
-            Log.i('nothing has changed')
+            Log.i('nothing has modified')
             return
         # 生成新版本
         self.save_flist(newdir, major, minor)  # 保存flist
