@@ -616,7 +616,6 @@ def main():
     # builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new_develop')
     builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new_release')
-    # builder = CocosBuilder('/Users/joli/Work/CS/C/hotfix_tmp')
     builder.build(16774, mode=BVM.kHOTFIX)
 
     from jonlin.utils import FS

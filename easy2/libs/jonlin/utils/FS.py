@@ -51,13 +51,11 @@ def parentname(p, sep=None):
 
 # 删除目录下所有的空文件夹
 def rm_empty_dirs(root):
-    for (par, dirs, _) in os.walk(root):
-        for name in dirs:
-            path = os.path.join(par, name)
-            if len(os.listdir(path)) > 0:
-                continue
-            log.d('rm_empty_dir:', path)
-            os.rmdir(path)
+    for (parent, dirs, _) in os.walk(dstdir):
+        for fn in dirs:
+            dirpath = os.path.join(parent, fn)
+            if not os.listdir(dirpath):
+                os.rmdir(dirpath)
 
 # 移动文件
 def moveto(src, dst):
