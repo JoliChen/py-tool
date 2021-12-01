@@ -5,9 +5,10 @@
 import json
 import os
 import re
+import shutil
 from xml.dom import minidom
 
-from jonlin.utils import Crypto, Bit
+from jonlin.utils import Crypto, Bit, FS
 
 
 def test_crypto():
@@ -128,21 +129,24 @@ def test_modify_androidmanifest():
             _modify_androidmanifest(xmlpath)
 
 def main():
-    # print(json.dumps({"command": "openRechargeView", "args": {"storeType": 1}}))
-    # test_crypto()
-    # test_mod_optime()
-    # test_modify_androidmanifest()
-
-    # for sn in range(1, 256):
-    #     for module in range(1, 256):
-    #         for cmd in range(1, 256):
-    #             a = sn << 16 | module << 8 | cmd
-    #             b = sn * 65536 + module * 256 + cmd
-    #             if a == b:
-    #                 print('errr', a, b)
-
-    print(pow(2, 16))
-    print('done')
+    projdir = '/Users/joli/Work/CS/C/xiuxian_new_release'
+    jsonpath = os.path.join(projdir, 'build/bvm/notes/bundle_16774_116191.json')
+    with open(jsonpath, 'r') as fp:
+        manifest = json.load(fp)
+        manifest = manifest['files']
+    outdir = '/Users/joli/Downloads/out'
+    dzgdir = os.path.join(projdir, 'dazhanguo')
+    dzgpos = len(dzgdir) + 1
+    for par, _, files in os.walk(os.path.join(dzgdir, 'res')):
+        for fn in files:
+            if fn.endswith(".DS_Store"):
+                continue
+            fp = os.path.join(par, fn)
+            fk = fp[dzgpos:]
+            if fk not in manifest or manifest[fk]['sign'] != FS.md5(fp):
+                dstpath = os.path.join(outdir, fk)
+                FS.make_parent(dstpath)
+                shutil.copyfile(fp, dstpath)
 
 if __name__ == '__main__':
     main()

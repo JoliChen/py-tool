@@ -127,12 +127,10 @@ class BaseProject:
     TEA_KEY = b'$yz#z0X78'  # xxtea秘钥
     TEA_SIG = b'0x0305~yz'  # xxtea签名
 
-    def __init__(self, projdir):
+    def __init__(self, projdir, major):
+        self.majorver = major
         self.projdir = projdir
-        self.shelldir = os.path.join(projdir, 'make')
-        self.toolsdir = os.path.join(projdir, 'tools')
         self.builddir = os.path.join(projdir, 'build')
-        self.ccsuidir = os.path.join(projdir, 'CocosProject')
         self.patchdir = os.path.join(projdir, 'patch')  # patch dir
         self.hotfix_manifest_txt = os.path.join(self.patchdir, 'manifest_hotfix.txt')
         self.bundle_manifest_txt = os.path.join(self.patchdir, 'manifest_bundle.txt')
@@ -143,10 +141,7 @@ class BaseProject:
         self.teasig = self.TEA_SIG  # xxtea签名
 
         Log.i('projdir',  self.projdir)
-        Log.i('shelldir', self.shelldir)
-        Log.i('toolsdir', self.toolsdir)
         Log.i('builddir', self.builddir)
-        Log.i('ccsuidir', self.ccsuidir)
         Log.i('patchdir', self.patchdir)
         Log.i('appdir',   self.appdir)
 
@@ -214,7 +209,7 @@ class BaseProject:
     def create_flist(filedict, major, minor):
         s = ''
         reg_key = re.compile(r'[/.]')
-        reg_err = re.compile(r'[^0-9a-zA-Z_/.]')
+        reg_err = re.compile(r'[^0-9a-zA-Z_/.-]')
         for (name, info) in filedict.items():
             if name.endswith('.DS_Store'):
                 continue
@@ -226,6 +221,8 @@ class BaseProject:
         return s
 
     def save_flist(self, verdir, major, minor):
+        if 0 == major:
+            major = self.majorver
         if 0 == minor:
             minor = self.svnclient.get_revision(self.appdir)
         filedir = os.path.join(verdir, 'myfile')
@@ -269,14 +266,14 @@ class UloProject(BaseProject):
         'DramaCartoon'
     )
 
-    def __init__(self, projdir):
-        super(UloProject, self).__init__(projdir)
+    def __init__(self, projdir, major):
+        super(UloProject, self).__init__(projdir, major)
 
     @staticmethod
     def classify_luapkgs(luapkgs, fk):
         if fk.startswith('csb/'):
             ep = fk.find('/', 4)
-            csbname = fk[4: ep + 1] if ep > 0 else fk[4:]
+            csbname = fk[4: ep] if ep > 0 else fk[4:]
             if csbname in UloProject.LUA_BASE_CSBLIST:
                 luapkgs.add('base')
             else:
@@ -299,7 +296,7 @@ class UloProject(BaseProject):
                 fk = Kit.normposix(fp[namepos:])
                 if fk.startswith('csb/'):
                     ep = fk.find('/', 4)
-                    csbname = fk[4: ep + 1] if ep > 0 else fk[4:]
+                    csbname = fk[4: ep] if ep > 0 else fk[4:]
                     if csbname not in UloProject.LUA_BASE_CSBLIST:
                         ignored_names.add(fn)
                 elif fk.startswith('app/modules'):
@@ -321,7 +318,7 @@ class UloProject(BaseProject):
                 fp = os.path.join(folder, fn)
                 fk = Kit.normposix(fp[namepos:])
                 ep = fk.find('/')
-                csbname = fk[:ep + 1] if ep > 0 else fk
+                csbname = fk[:ep] if ep > 0 else fk
                 if csbname in UloProject.LUA_BASE_CSBLIST:
                     ignored_names.add(fn)
             return ignored_names
@@ -404,7 +401,7 @@ class UloProject(BaseProject):
             self.pack_luazips(dstdir, luapkgs)
         Log.i('make changed src done')
 
-    def hotfix(self, major, minor=0):
+    def hotfix(self, major=0, minor=0):
         t = time.time()
         verdir = os.path.join(self.patchdir, 'version')
         hotdir = os.path.join(self.builddir, 'hotfix')
@@ -450,7 +447,7 @@ class UloProject(BaseProject):
         self.save_manifest(self.hotfix_manifest_txt, new_filedict)
         print('hotfix done %smin' % round((time.time() - t) / 60, 3))
 
-    def bundle(self, major, minor=0):
+    def bundle(self, major=0, minor=0):
         t = time.time()
         bundledir = os.path.join(self.builddir, 'bundle')
         myfiledir = os.path.join(bundledir, 'myfile')
@@ -480,9 +477,10 @@ class UloProject(BaseProject):
 
 def main():
     # project = UloProject(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    project = UloProject('/Users/joli/Work/CS/C/xiuxian_bt2')
-    # project.bundle(20000, 116953)
-    project.hotfix(20000, 116953)
+    # project = UloProject('/Users/joli/Work/CS/C/xiuxian_bt2', 20000)
+    project = UloProject('/Users/joli/Work/CS/C/sanguonew_bt_vn', 16774)
+    # project.bundle(minor=116953)
+    project.hotfix()
 
     # from jonlin.utils import FS
     # FS.explorer(project.builddir)
