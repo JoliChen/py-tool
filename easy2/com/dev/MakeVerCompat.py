@@ -131,10 +131,10 @@ class BaseProject:
         self.majorver = major
         self.projdir = projdir
         self.builddir = os.path.join(projdir, 'build')
-        self.patchdir = os.path.join(projdir, 'patch')  # patch dir
+        self.appdir = os.path.join(projdir, 'dazhanguo')  # application dir
+        self.patchdir = os.path.join(self.appdir, 'patch')  # patch dir
         self.hotfix_manifest_txt = os.path.join(self.patchdir, 'manifest_hotfix.txt')
         self.bundle_manifest_txt = os.path.join(self.patchdir, 'manifest_bundle.txt')
-        self.appdir = os.path.join(projdir, 'dazhanguo')  # application dir
         self.svnclient = SvnClient()
 
         self.teakey = self.TEA_KEY + bytes(16 - len(self.TEA_KEY))  # need a 16-byte key.
@@ -440,8 +440,9 @@ class UloProject(BaseProject):
         # 生成新版本
         self.save_flist(newdir, major, minor)  # 保存flist
         if os.path.isdir(verdir):
-            bakdir = os.path.join(self.patchdir, 'version%s' % time.strftime('%Y-%m-%d %X'))
-            os.rename(verdir, bakdir)
+            bakdir = os.path.join(self.patchdir, 'backup', time.strftime('%Y-%m-%d %X'))
+            Kit.make_parentdir(bakdir)
+            shutil.move(verdir, bakdir)
         shutil.move(newdir, verdir)
         # 保存版本清单
         self.save_manifest(self.hotfix_manifest_txt, new_filedict)
