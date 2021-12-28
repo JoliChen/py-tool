@@ -2,21 +2,22 @@
 # @Time    : 2021/5/8 8:23 PM
 # @Author  : Joli
 # @Email   : 99755349@qq.com
+
 import sys
 import optparse
 from scripts import SSHUtil, XLSUtil
 
 def do_test():
-    # import os
     # sshconf = {'host': '10.16.101.68', 'port': 61620, 'username': 'uzone', 'password': 'uzone123', 'policy': 'auto'}
-    # sshconf = {'host': '10.16.101.68', 'port': 61620, 'username': 'root', 'key': '/Users/joli/.ssh/id_rsa', 'policy': 'auto'}
+    # sshconf = {'host': '82.157.51.182', 'port': 22, 'username': 'uzone', 'key': '/Users/joli/.ssh/id_rsa', 'policy': 'auto'}
     # SSHUtil.upload(
     #     sshconf,
-    #     localdir='/Users/joli/Work/CS/C/xiuxian_new/docs/server_config',
-    #     remotedir='/data/uzone_xiuxiannew_c9300/resources/config2',
+    #     localdir='/Users/joli/Work/CS/C/xuanmen_dev/docs/server_config',
+    #     remotedir='/data/p800_xiuxiannew_s9442/resources/config2',
     #     allowlist=[])
     # SSHUtil.run(sshconf, 'ls -l')
 
+    # import os
     # projdir = '/Users/joli/Work/CS/C/xiuxian_new'
     # xlsxdir = os.path.join(projdir, 'docs/config')
     # jsondir = os.path.join(projdir, 'dazhanguo/tmp/config_out')
@@ -37,7 +38,8 @@ def do_ssh(opts, args):
         SSHUtil.run(sshconf, opts.command)
     elif opts.upload:
         allowlist = opts.allowlist.split(',') if opts.allowlist else None
-        SSHUtil.upload(sshconf, opts.localdir, opts.remotedir, allowlist)
+        syncstat = opts.syncstat == 1
+        SSHUtil.upload(sshconf, opts.localdir, opts.remotedir, allowlist, syncstat)
     else:
         pass
 
@@ -55,7 +57,7 @@ def main():
 
     og_ssh_login = optparse.OptionGroup(op, 'SSH登录配置')
     og_ssh_login.add_option('--host', dest='host', help='主机IP'),
-    og_ssh_login.add_option('--port', dest='port', type='int', help='主机端口'),
+    og_ssh_login.add_option('--port', dest='port', type='int', default=22, help='主机端口'),
     og_ssh_login.add_option('--username', dest='username', help='用户名称'),
     og_ssh_login.add_option('--password', dest='password', help='登录密码'),
     og_ssh_login.add_option('--key', dest='key', help='用户秘钥(id_rsa)'),
@@ -72,6 +74,7 @@ def main():
     og_ssh_upload.add_option('--localdir', dest='localdir', help='本地目录')
     og_ssh_upload.add_option('--remotedir', dest='remotedir', help='远程目录')
     og_ssh_upload.add_option('--allowlist', dest='allowlist', help='白名单')
+    og_ssh_upload.add_option('--syncstat', dest='syncstat', type='int', default=1, help='是否同步修改时间[0, 1]')
     op.add_option_group(og_ssh_upload)
 
     og_excel = optparse.OptionGroup(op, 'excel操作')

@@ -8,6 +8,7 @@ import re
 import shutil
 from xml.dom import minidom
 
+from com.arts import ImageTailor
 from jonlin.utils import Crypto, Bit, FS
 
 
@@ -128,7 +129,7 @@ def test_modify_androidmanifest():
             xmlpath = os.path.join(varpath, 'AndroidManifest.xml')
             _modify_androidmanifest(xmlpath)
 
-def main():
+def test_fenxi_bundlejson():
     projdir = '/Users/joli/Work/CS/C/xiuxian_new_release'
     jsonpath = os.path.join(projdir, 'build/bvm/notes/bundle_16774_116191.json')
     with open(jsonpath, 'r') as fp:
@@ -147,6 +148,21 @@ def main():
                 dstpath = os.path.join(outdir, fk)
                 FS.make_parent(dstpath)
                 shutil.copyfile(fp, dstpath)
+
+def test_split_spine():
+    # def spine(atlaspath, imagepath=None, outputdir=None, fixwhite=True):
+    spine_dir = '/Users/joli/Downloads/sp/assetbundles'
+    for par, _, files in os.walk(spine_dir):
+        for fn in files:
+            if fn.endswith('.atlas'):
+                fp1 = os.path.join(par, fn)
+                fd1 = os.path.dirname(fp1)
+                print('------------', fp1)
+                ImageTailor.spine(fp1, outputdir=os.path.join(fd1, 'images'))
+
+def main():
+    # test_fenxi_bundlejson()
+    test_split_spine()
 
 if __name__ == '__main__':
     main()

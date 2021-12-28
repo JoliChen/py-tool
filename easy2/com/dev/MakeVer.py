@@ -614,8 +614,9 @@ def main():
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/scjz_bt')
     # builder = CocosBuilder('/Users/joli/Work/CS/C/xiyou')
-    builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new_develop')
-    # builder = CocosBuilder('/Users/joli/Work/CS/C/xiuxian_new_release')
+    builder = CocosBuilder('/Users/joli/Work/CS/C/xuanmen')  # xuanmen_p800
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/xuanmen_dev')  # xuanme_taptap
+    # builder = CocosBuilder('/Users/joli/Work/CS/C/xuanmen_bt')
     builder.build(16774, mode=BVM.kHOTFIX)
 
     from jonlin.utils import FS

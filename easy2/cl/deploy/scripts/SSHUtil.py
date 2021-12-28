@@ -52,20 +52,24 @@ def sftp_cleardir(sftp: SFTPClient, rootdir):
         print("sftp listdir:%s, error:%s" % (rootdir, e))
         remotefiles = []
     for fn in remotefiles:
-        fp = rootdir + '/' + fn
+        fp = rootdir + '/' + fn  # os.path.join(rootdir, fn)
         try:
             sftp.remove(fp)
         except Exception as e:
             print("sftp remove:%s, error:%s" % (fp, e))
 
-def upload(sshconf, localdir, remotedir, allowlist: list):
+def upload(sshconf, localdir, remotedir, allowlist: list, syncstat=True):
     print('%s upload: %s -> %s' % (datetime.datetime.now(), localdir, remotedir))
     relatpos = len(localdir) + 1
     pt = None
     try:
-        sock = (sshconf['host'], sshconf['port'])
-        pt = paramiko.Transport(sock)
-        pt.connect(username=sshconf['username'], password=sshconf['password'])
+        pt = paramiko.Transport((sshconf['host'], sshconf['port']))
+        key_file = sshconf.get('key')
+        if key_file:
+            private_key = paramiko.RSAKey.from_private_key_file(key_file)
+            pt.connect(username=sshconf['username'], pkey=private_key)
+        else:
+            pt.connect(username=sshconf['username'], password=sshconf['password'])
         sftp = SFTPClient.from_transport(pt)
         sftp_mkdir(sftp, remotedir)
         if not allowlist:
@@ -76,7 +80,7 @@ def upload(sshconf, localdir, remotedir, allowlist: list):
                 relatname = localpath[relatpos:]
                 if allowlist and relatname not in allowlist:
                     continue
-                remotepath = os.path.join(remotedir, relatname)
+                remotepath = remotedir + '/' + relatname  # os.path.join(remotedir, relatname)
                 # print("mkdir:%s" % remotepath)
                 try:
                     sftp.mkdir(remotepath)
@@ -87,10 +91,13 @@ def upload(sshconf, localdir, remotedir, allowlist: list):
                 relatname = localpath[relatpos:]
                 if allowlist and relatname not in allowlist:
                     continue
-                remotepath = os.path.join(remotedir, relatname)
+                remotepath = remotedir + '/' + relatname  # os.path.join(remotedir, relatname)
                 # print("upload:%s" % remotepath)
                 try:
                     sftp.put(localpath, remotepath)
+                    if syncstat:
+                        lst = os.stat(localpath)
+                        sftp.utime(remotepath, (lst.st_atime, lst.st_mtime))
                 except Exception as e:
                     print("upload %s to remote %s, error:%s" % (localpath, remotepath, e))
     except Exception as e:
