@@ -162,7 +162,17 @@ def test_split_spine():
 
 def main():
     # test_fenxi_bundlejson()
-    test_split_spine()
+    # test_split_spine()
+    cut = len('/Users/joli/Work/CS/C/xuanmen_dev/')
+    with open('/Users/joli/Desktop/sync.txt', 'r') as fp:
+        s = fp.read()
+        for ff in s.split('\n'):
+            if not os.path.isfile(ff):
+                continue
+            # print(ff)
+            fn = ff[cut:]
+            print(fn)
+            shutil.copyfile(ff, '/Users/joli/Work/proj.h/HClient/' + fn)
 
 if __name__ == '__main__':
     main()

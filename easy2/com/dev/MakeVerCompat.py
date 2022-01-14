@@ -240,6 +240,174 @@ class BaseProject:
             fp.write(s)
         Log.i('save flist done [major:%d, minor:%d] %s' % (major, minor, txtpath))
 
+# 战国项目（特征是配置表是lua格式）
+class OldProject(BaseProject):
+    # 脚本包
+    LUA_PACKAGES = ('script', 'modules', 'config')
+
+    def __init__(self, projdir, major):
+        super(OldProject, self).__init__(projdir, major)
+
+    @staticmethod
+    def _mklua_script(srcdir, luadir):
+        namepos = len(srcdir) + 1
+
+        def filter_func(folder, names):
+            ignored_names = set()
+            for fn in names:
+                fp = os.path.join(folder, fn)
+                fk = Kit.normposix(fp[namepos:])
+                if fk.startswith('config/'):
+                    ignored_names.add(fn)
+                elif fk.startswith('app/modules'):
+                    ignored_names.add(fn)
+            return ignored_names
+
+        Kit.fast_copytree(srcdir, luadir, filter_func)
+        Log.i('make luadir', luadir)
+
+    @staticmethod
+    def _mklua_modules(srcdir, luadir):
+        Kit.fast_copytree(os.path.join(srcdir, 'app/modules'), os.path.join(luadir, 'app/modules'))
+        Log.i('make luadir', luadir)
+
+    @staticmethod
+    def _mklua_config(srcdir, luadir):
+        Kit.fast_copytree(os.path.join(srcdir, 'config'), os.path.join(luadir, 'config'))
+        Log.i('make luadir', luadir)
+
+    def make_luadirs(self, dstdir, packages=LUA_PACKAGES):
+        srcdir = os.path.join(self.appdir, 'src')
+        for name in packages:
+            luadir = os.path.join(dstdir, name)
+            getattr(self, '_mklua_%s' % name)(srcdir, luadir)
+        Log.i('make all luadir done')
+
+    def pack_luazips(self, dstdir, packages=LUA_PACKAGES):
+        for name in packages:
+            luadir = os.path.join(dstdir, name)
+            if os.path.isdir(luadir):
+                zippath = shutil.make_archive(luadir, 'zip', luadir)
+                self.encrypt_file(zippath, zippath)
+                os.rename(zippath, zippath.replace('.zip', '.pak'))
+                shutil.rmtree(luadir)
+        Log.i('pack all lua done')
+
+    @staticmethod
+    def classify_luapkgs(luapkgs, fk):
+        if fk.startswith('app/modules'):
+            luapkgs.add('modules')
+        elif fk.startswith('config/'):
+            luapkgs.add('config')
+        else:
+            luapkgs.add('script')
+
+    def make_changed_src(self, dstdir, old_filedict, new_filedict):
+        luapkgs = set()  # 'csb', 'modules', 'base', 'script'
+        namepos = len(self.appdir) + 1
+        for (parent, _, files) in os.walk(os.path.join(self.appdir, 'src')):
+            for fn in files:
+                if fn == '.DS_Store':
+                    continue
+                fp = os.path.join(parent, fn)
+                new_fileinfo = self.create_fileinfo(fp, namepos)
+                fk = new_fileinfo['patchName']
+                new_filedict[fk] = new_fileinfo
+                old_fileinfo = old_filedict.get(fk)
+                if (not old_fileinfo) or (old_fileinfo['md5'] != new_fileinfo['md5']):
+                    self.classify_luapkgs(luapkgs, fk[4:])  # 去掉'src/'
+        if luapkgs:
+            self.make_luadirs(dstdir, luapkgs)
+            self.pack_luazips(dstdir, luapkgs)
+        Log.i('make changed src done')
+
+    def make_changed_res(self, dstdir, old_filedict, new_filedict):
+        namepos = len(self.appdir) + 1
+        for (parent, _, files) in os.walk(os.path.join(self.appdir, 'res')):
+            for fn in files:
+                if fn == '.DS_Store':
+                    continue
+                fp = os.path.join(parent, fn)
+                new_fileinfo = self.create_fileinfo(fp, namepos)
+                name = new_fileinfo['patchName']
+                new_filedict[name] = new_fileinfo
+                old_fileinfo = old_filedict.get(name)
+                if (not old_fileinfo) or (old_fileinfo['md5'] != new_fileinfo['md5']):
+                    Kit.safe_copyfile(fp, os.path.join(dstdir, name))
+        Log.i('make changed res done')
+
+    def hotfix(self, major=0, minor=0):
+        t = time.time()
+        verdir = os.path.join(self.patchdir, 'version')
+        hotdir = os.path.join(self.builddir, 'hotfix')
+        newdir = os.path.join(hotdir, 'version')  # 新版本目录
+        # 初始化版本清单
+        has_modified = False
+        new_filedict = {}
+        if os.path.isfile(self.hotfix_manifest_txt):
+            old_filedict = self.load_old_manifest(self.hotfix_manifest_txt)
+        else:
+            old_filedict = self.load_old_manifest(self.bundle_manifest_txt)
+        # 拷贝基础版本
+        Kit.rmdirs(hotdir)
+        if os.path.isdir(verdir):
+            Kit.fast_copytree(verdir, newdir)
+        # 打包脚本
+        srcdir = os.path.join(hotdir, 'src')
+        self.make_changed_src(srcdir, old_filedict, new_filedict)
+        if os.path.isdir(srcdir):
+            Kit.mergetree(srcdir, os.path.join(newdir, 'myfile'))  # 把新的脚本包合并到基础版本
+            has_modified = True
+        # 打包资源
+        resdir = os.path.join(hotdir, 'res')
+        self.make_changed_res(hotdir, old_filedict, new_filedict)
+        if os.path.isdir(resdir):
+            self.encrypt_res(resdir)  # 加密资源
+            dstdir = os.path.join(newdir, 'myfile', 'res')
+            Kit.mergetree(resdir, dstdir)  # 把新的加密资源合并到基础版本里
+            has_modified = True
+        if not has_modified:
+            Log.i('nothing has modified')
+            return
+        # 生成新版本
+        self.save_flist(newdir, major, minor)  # 保存flist
+        if os.path.isdir(verdir):
+            bakdir = os.path.join(self.patchdir, 'backup', time.strftime('%Y-%m-%d %X'))
+            Kit.make_parentdir(bakdir)
+            shutil.move(verdir, bakdir)
+        shutil.move(newdir, verdir)
+        # 保存版本清单
+        self.save_manifest(self.hotfix_manifest_txt, new_filedict)
+        print('hotfix done %smin' % round((time.time() - t) / 60, 3))
+
+    def bundle(self, major=0, minor=0):
+        t = time.time()
+        bundledir = os.path.join(self.builddir, 'bundle')
+        myfiledir = os.path.join(bundledir, 'myfile')
+        # 打包脚本
+        appsrcdir = os.path.join(self.appdir, 'src')
+        Kit.rmdirs(bundledir)
+        self.make_luadirs(myfiledir)
+        self.pack_luazips(myfiledir)
+        # 打包资源
+        appresdir = os.path.join(self.appdir, 'res')
+        dstresdir = os.path.join(myfiledir, 'res')
+        Kit.fast_copytree(appresdir, dstresdir)
+        self.encrypt_res(dstresdir)
+        # 生成flist
+        self.save_flist(bundledir, major, minor)
+        # 去掉myfile文件夹
+        for fn in os.listdir(myfiledir):
+            shutil.move(os.path.join(myfiledir, fn), os.path.join(bundledir, fn))
+        os.rmdir(myfiledir)
+        # 生成版本清单
+        new_filedict = {}
+        namepos = len(self.appdir) + 1
+        self.collect_manifest(appsrcdir, namepos, new_filedict)
+        self.collect_manifest(appresdir, namepos, new_filedict)
+        self.save_manifest(self.bundle_manifest_txt, new_filedict)
+        print('bundle done %smin' % round((time.time() - t) / 60, 3))
+
 # 修仙项目（特征是配置表是ulo格式）
 class UloProject(BaseProject):
     # 脚本包
@@ -478,9 +646,10 @@ class UloProject(BaseProject):
 
 def main():
     # project = UloProject(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    project = OldProject('/Users/joli/Work/CS/C/sanguo_dudai_vn', 16774)
     # project = UloProject('/Users/joli/Work/CS/C/xiuxian_bt2', 20000)
-    project = UloProject('/Users/joli/Work/CS/C/sanguonew_bt_vn', 16774)
-    # project.bundle(minor=116953)
+    # project = UloProject('/Users/joli/Work/CS/C/sanguonew_bt_vn', 16774)
+    # project.bundle()
     project.hotfix()
 
     # from jonlin.utils import FS
