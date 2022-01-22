@@ -38,7 +38,8 @@ class ObbBuilder:
         curdir = config['work_dir'] if 'work_dir' in config else work_dir
 
         build_dir = os.path.join(curdir, 'build')
-        shutil.rmtree(build_dir)
+        if os.path.isdir(build_dir):
+            shutil.rmtree(build_dir)
         shutil.copytree(config['resource_dir'], build_dir)
 
         assets_dir = os.path.join(config['project_dir'], 'assets')

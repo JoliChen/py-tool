@@ -50,7 +50,7 @@ def parentname(p, sep=None):
     return p[Text.last_find(p, sep, s - 1) + 1: s]
 
 # 删除目录下所有的空文件夹
-def rm_empty_dirs(root):
+def rm_empty_dirs(dstdir):
     for (parent, dirs, _) in os.walk(dstdir):
         for fn in dirs:
             dirpath = os.path.join(parent, fn)

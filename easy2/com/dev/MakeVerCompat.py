@@ -646,7 +646,8 @@ class UloProject(BaseProject):
 
 def main():
     # project = UloProject(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    project = OldProject('/Users/joli/Work/CS/C/sanguo_dudai_vn', 16774)
+    # project = OldProject('/Users/joli/Work/CS/C/sanguo_dudai_vn', 16774)
+    project = OldProject('/Users/joli/Work/CS/C/sanguo_dudainew_vn', 16774)
     # project = UloProject('/Users/joli/Work/CS/C/xiuxian_bt2', 20000)
     # project = UloProject('/Users/joli/Work/CS/C/sanguonew_bt_vn', 16774)
     # project.bundle()
